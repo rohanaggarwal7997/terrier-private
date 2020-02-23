@@ -75,7 +75,7 @@ class BPlusTreeBase {
   /*
    * Constructor
    */
-  BPlusTreeBase() :{}
+  BPlusTreeBase() {}
 
   /*
    * Destructor
@@ -131,14 +131,14 @@ template <typename KeyType, typename ValueType, typename KeyComparator = std::le
 class BPlusTree : public BPlusTreeBase {
  public:
   class BaseNode;
-  class KeyNodeIDPairComparator;
-  class KeyNodeIDPairHashFunc;
-  class KeyNodeIDPairEqualityChecker;
+  class KeyNodePointerPairComparator;
+  class KeyNodePointerPairHashFunc;
+  class KeyNodePointerPairEqualityChecker;
   class KeyValuePairHashFunc;
   class KeyValuePairEqualityChecker;
 
   // KeyType-NodeID pair
-  using KeyNodeIDPair = std::pair<KeyType, NodeID>;
+  using KeyNodePointerPair = std::pair<KeyType, BaseNode *>;
   // KeyType-ValueType pair
   using KeyValuePair = std::pair<KeyType, ValueType>;
 
@@ -156,25 +156,25 @@ class BPlusTree : public BPlusTreeBase {
   ///////////////////////////////////////////////////////////////////
 
   /*
-   * class KeyNodeIDPairComparator - Compares key-value pair for < relation
+   * class KeyNodePointerPairComparator - Compares key-value pair for < relation
    *
    * Only key values are compares. However, we should use WrappedKeyComparator
    * instead of the raw one, since there could be -Inf involved in inner nodes
    */
-  class KeyNodeIDPairComparator {
+  class KeyNodePointerPairComparator {
    public:
     const KeyComparator *key_cmp_obj_p;
 
     /*
      * Default constructor - deleted
      */
-    KeyNodeIDPairComparator() = delete;
+    KeyNodePointerPairComparator() = delete;
 
     /*
      * Constructor - Initialize a key-NodeID pair comparator using
      *               wrapped key comparator
      */
-    KeyNodeIDPairComparator(BPlusTree *p_tree_p) : key_cmp_obj_p{&p_tree_p->key_cmp_obj} {}
+    KeyNodePointerPairComparator(BPlusTree *p_tree_p) : key_cmp_obj_p{&p_tree_p->key_cmp_obj} {}
 
     /*
      * operator() - Compares whether a key NodeID pair is less than another
@@ -182,57 +182,57 @@ class BPlusTree : public BPlusTreeBase {
      * We only compare keys since there should not be duplicated
      * keys inside an inner node
      */
-    inline bool operator()(const KeyNodeIDPair &knp1, const KeyNodeIDPair &knp2) const {
+    inline bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
       // First compare keys for relation
       return (*key_cmp_obj_p)(knp1.first, knp2.first);
     }
   };
 
   /*
-   * class KeyNodeIDPairEqualityChecker - Checks KeyNodeIDPair equality
+   * class KeyNodePointerPairEqualityChecker - Checks KeyNodePointerPair equality
    *
    * Only keys are checked since there should not be duplicated keys inside
    * inner nodes. However we should always use wrapped key eq checker rather
    * than wrapped raw key eq checker
    */
-  class KeyNodeIDPairEqualityChecker {
+  class KeyNodePointerPairEqualityChecker {
    public:
     const KeyEqualityChecker *key_eq_obj_p;
 
     /*
      * Default constructor - deleted
      */
-    KeyNodeIDPairEqualityChecker() = delete;
+    KeyNodePointerPairEqualityChecker() = delete;
 
     /*
      * Constructor - Initialize a key node pair eq checker
      */
-    KeyNodeIDPairEqualityChecker(BPlusTree *p_tree_p) : key_eq_obj_p{&p_tree_p->key_eq_obj} {}
+    KeyNodePointerPairEqualityChecker(BPlusTree *p_tree_p) : key_eq_obj_p{&p_tree_p->key_eq_obj} {}
 
     /*
      * operator() - Compares key-NodeID pair by comparing keys
      */
-    inline bool operator()(const KeyNodeIDPair &knp1, const KeyNodeIDPair &knp2) const {
+    inline bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
       return (*key_eq_obj_p)(knp1.first, knp2.first);
     }
   };
 
   /*
-   * class KeyNodeIDPairHashFunc - Hashes a key-NodeID pair into size_t
+   * class KeyNodePointerPairHashFunc - Hashes a key-NodeID pair into size_t
    */
-  class KeyNodeIDPairHashFunc {
+  class KeyNodePointerPairHashFunc {
    public:
     const KeyHashFunc *key_hash_obj_p;
 
     /*
      * Default constructor - deleted
      */
-    KeyNodeIDPairHashFunc() = delete;
+    KeyNodePointerPairHashFunc() = delete;
 
     /*
      * Constructor - Initialize a key value pair hash function
      */
-    KeyNodeIDPairHashFunc(BPlusTree *p_tree_p) : key_hash_obj_p{&p_tree_p->key_hash_obj} {}
+    KeyNodePointerPairHashFunc(BPlusTree *p_tree_p) : key_hash_obj_p{&p_tree_p->key_hash_obj} {}
 
     /*
      * operator() - Hashes a key-value pair by hashing each part and
@@ -241,7 +241,7 @@ class BPlusTree : public BPlusTreeBase {
      * We use XOR to combine hashes of the key and value together into one
      * single hash value
      */
-    inline size_t operator()(const KeyNodeIDPair &knp) const { return (*key_hash_obj_p)(knp.first); }
+    inline size_t operator()(const KeyNodePointerPair &knp) const { return (*key_hash_obj_p)(knp.first); }
   };
 
   ///////////////////////////////////////////////////////////////////
@@ -382,15 +382,15 @@ class BPlusTree : public BPlusTreeBase {
   class NodeMetaData {
    public:
     // For all nodes including base node and data node and SMO nodes,
-    // the low key pointer always points to a KeyNodeIDPair structure
+    // the low key pointer always points to a KeyNodePointerPair structure
     // inside the base node, which is either the first element of the
     // node sep list (InnerNode), or a class member (LeafNode)
-    const KeyNodeIDPair *low_key_p;
+    const KeyNodePointerPair *low_key_p;
 
-    // high key points to the KeyNodeIDPair inside the LeafNode and InnerNode
+    // high key points to the KeyNodePointerPair inside the LeafNode and InnerNode
     // if there is neither SplitNode nor MergeNode. Otherwise it
     // points to the item inside split node or merge right sibling branch
-    const KeyNodeIDPair *high_key_p;
+    const KeyNodePointerPair *high_key_p;
 
     // The type of the node; this is forced to be represented as a short type
     NodeType type;
@@ -408,7 +408,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Constructor
      */
-    NodeMetaData(const KeyNodeIDPair *p_low_key_p, const KeyNodeIDPair *p_high_key_p, NodeType p_type, int p_depth,
+    NodeMetaData(const KeyNodePointerPair *p_low_key_p, const KeyNodePointerPair *p_high_key_p, NodeType p_type, int p_depth,
                  int p_item_count)
         : low_key_p{p_low_key_p},
           high_key_p{p_high_key_p},
@@ -433,7 +433,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Constructor - Initialize type and metadata
      */
-    BaseNode(NodeType p_type, const KeyNodeIDPair *p_low_key_p, const KeyNodeIDPair *p_high_key_p, int p_depth,
+    BaseNode(NodeType p_type, const KeyNodePointerPair *p_low_key_p, const KeyNodePointerPair *p_high_key_p, int p_depth,
              int p_item_count)
         : metadata{p_low_key_p, p_high_key_p, p_type, p_depth, p_item_count} {}
 
@@ -480,19 +480,19 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * GetHighKeyPair() - Returns the pointer to high key node id pair
      */
-    inline const KeyNodeIDPair &GetHighKeyPair() const { return *metadata.high_key_p; }
+    inline const KeyNodePointerPair &GetHighKeyPair() const { return *metadata.high_key_p; }
 
     /*
      * GetLowKeyPair() - Returns the pointer to low key node id pair
      *
      * The return value is nullptr for LeafNode and its delta chain
      */
-    inline const KeyNodeIDPair &GetLowKeyPair() const { return *metadata.low_key_p; }
+    inline const KeyNodePointerPair &GetLowKeyPair() const { return *metadata.low_key_p; }
 
     /*
      * GetNextNodeID() - Returns the next NodeID of the current node
      */
-    inline NodeID GetNextNodeID() const { return metadata.high_key_p->second; }
+    inline BaseNode * GetNextNodeID() const { return metadata.high_key_p->second; }
 
     /*
      * GetLowKeyNodeID() - Returns the NodeID for low key
@@ -500,9 +500,7 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function should not be called for leaf nodes
      * since the low key node ID for leaf node is not defined
      */
-    inline NodeID GetLowKeyNodeID() const {
-      TERRIER_ASSERT(!IsOnLeafDeltaChain(), "This should not be called on leaf nodes.");
-
+    inline BaseNode * GetLowKeyNodeID() const {
       return metadata.low_key_p->second;
     }
 
@@ -519,12 +517,12 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
      */
-    inline void SetLowKeyPair(const KeyNodeIDPair *p_low_key_p) { metadata.low_key_p = p_low_key_p; }
+    inline void SetLowKeyPair(const KeyNodePointerPair *p_low_key_p) { metadata.low_key_p = p_low_key_p; }
 
     /*
      * SetHighKeyPair() - Sets the high key pair of metdtata
      */
-    inline void SetHighKeyPair(const KeyNodeIDPair *p_high_key_p) { metadata.high_key_p = p_high_key_p; }
+    inline void SetHighKeyPair(const KeyNodePointerPair *p_high_key_p) { metadata.high_key_p = p_high_key_p; }
   };
 
   /*
@@ -541,8 +539,8 @@ class BPlusTree : public BPlusTreeBase {
     // These two are the low key and high key of the node respectively
     // since we could not add it in the inherited class (will clash with
     // the array which is invisible to the compiler) so they must be added here
-    KeyNodeIDPair low_key;
-    KeyNodeIDPair high_key;
+    KeyNodePointerPair low_key;
+    KeyNodePointerPair high_key;
 
     // This is the end of the elastic array
     // We explicitly store it here to avoid calculating the end of the array
@@ -559,8 +557,8 @@ class BPlusTree : public BPlusTreeBase {
      * Note that this constructor uses the low key and high key stored as
      * members to initialize the NodeMetadata object in class BaseNode
      */
-    ElasticNode(NodeType p_type, int p_depth, int p_item_count, const KeyNodeIDPair &p_low_key,
-                const KeyNodeIDPair &p_high_key)
+    ElasticNode(NodeType p_type, int p_depth, int p_item_count, const KeyNodePointerPair &p_low_key,
+                const KeyNodePointerPair &p_high_key)
         : BaseNode{p_type, &low_key, &high_key, p_depth, p_item_count},
           low_key{p_low_key},
           high_key{p_high_key},
@@ -596,23 +594,6 @@ class BPlusTree : public BPlusTreeBase {
         // Manually calls destructor when the node is destroyed
         element_p->~ElementType();
       }
-    }
-
-    /*
-     * Destroy() - Frees the memory by calling AllocationMeta::Destroy()
-     *
-     * Note that function does not call destructor, and instead the destructor
-     * should be called first before this function is called
-     *
-     * Note that this function does not call destructor for the class since
-     * it holds multiple instances of tree nodes, we should call destructor
-     * for each individual type outside of this class, and only frees memory
-     * when Destroy() is called.
-     */
-    void Destroy() const {
-      // This finds the allocation header for this base node, and then
-      // traverses the linked list
-      ElasticNode::GetAllocationHeader(this)->Destroy();
     }
 
     /*
@@ -691,10 +672,7 @@ class BPlusTree : public BPlusTreeBase {
     inline static ElasticNode *Get(int size,  // Number of elements
                                    NodeType p_type, int p_depth,
                                    int p_item_count,  // Usually equal to size
-                                   const KeyNodeIDPair &p_low_key, const KeyNodeIDPair &p_high_key) {
-      // Currently this is always true - if we want a larger array then
-      // just remove this line
-      TERRIER_ASSERT(size == p_item_count, "Remove this if you want a larger array.");
+                                   const KeyNodePointerPair &p_low_key, const KeyNodePointerPair &p_high_key) {
 
       // Allocte memory for
       //   1. AllocationMeta (chunk)
@@ -703,22 +681,11 @@ class BPlusTree : public BPlusTreeBase {
       // basic template + ElementType element size * (node size) + CHUNK_SIZE()
       // Note: do not make it constant since it is going to be modified
       // after being returned
-      auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType) + AllocationMeta::CHUNK_SIZE()];
-      TERRIER_ASSERT(alloc_base != nullptr, "Allocation failed.");
-
-      // Initialize the AllocationMeta - tail points to the first byte inside
-      // class ElasticNode; limit points to the first byte after class
-      // AllocationMeta
-      new (reinterpret_cast<AllocationMeta *>(alloc_base))
-          AllocationMeta{alloc_base + AllocationMeta::CHUNK_SIZE(), alloc_base + sizeof(AllocationMeta)};
-
-      // The first CHUNK_SIZE() byte is used by class AllocationMeta
-      // and chunk data
-      auto *node_p = reinterpret_cast<ElasticNode *>(alloc_base + AllocationMeta::CHUNK_SIZE());
+      auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType)];
+      auto *node_p = reinterpret_cast<ElasticNode *>(alloc_base);
 
       // Call placement new to initialize all that could be initialized
       new (node_p) ElasticNode{p_type, p_depth, p_item_count, p_low_key, p_high_key};
-
       return node_p;
     }
 
@@ -728,45 +695,10 @@ class BPlusTree : public BPlusTreeBase {
      * This is useful since only the low key pointer is available from any
      * type of node
      */
-    static ElasticNode *GetNodeHeader(const KeyNodeIDPair *low_key_p) {
+    static ElasticNode *GetNodeHeader(const KeyNodePointerPair *low_key_p) {
       static constexpr size_t low_key_offset = offsetof(ElasticNode, low_key);
 
       return reinterpret_cast<ElasticNode *>(reinterpret_cast<uint64_t>(low_key_p) - low_key_offset);
-    }
-
-    /*
-     * GetAllocationHeader() - Returns the address of class AllocationHeader
-     *                         embedded inside the ElasticNode object
-     */
-    static AllocationMeta *GetAllocationHeader(const ElasticNode *node_p) {
-      return reinterpret_cast<AllocationMeta *>(reinterpret_cast<uint64_t>(node_p) - AllocationMeta::CHUNK_SIZE());
-    }
-
-    /*
-     * InlineAllocate() - Allocates a delta node in preallocated area preceeds
-     *                    the data area of this ElasticNode
-     *
-     * Note that for any given NodeType, we always know its low key and the
-     * low key always points to the struct inside base node. This way, we
-     * compute the offset of the low key from the begining of the struct,
-     * and then subtract it with CHUNK_SIZE() to derive the address of
-     * class AllocationMeta
-     *
-     * Note that since this function is accessed when the header is unknown
-     * so (1) it is static, and (2) it takes low key p which is universally
-     * available for all node type (stored in NodeMetadata)
-     */
-    static void *InlineAllocate(const KeyNodeIDPair *low_key_p, size_t size) {
-      const ElasticNode *node_p = GetNodeHeader(low_key_p);
-      TERRIER_ASSERT(&node_p->low_key == low_key_p, "low_key is not low_key_p.");
-
-      // Jump over chunk content
-      AllocationMeta *meta_p = GetAllocationHeader(node_p);
-
-      void *p = meta_p->Allocate(size);
-      TERRIER_ASSERT(p != nullptr, "Allocation failed.");
-
-      return p;
     }
 
     /*
@@ -790,7 +722,7 @@ class BPlusTree : public BPlusTreeBase {
   /*
    * class InnerNode - Inner node that holds separators
    */
-  class InnerNode : public ElasticNode<KeyNodeIDPair> {
+  class InnerNode : public ElasticNode<KeyNodePointerPair> {
    public:
     /*
      * Constructor - Deleted
@@ -806,50 +738,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Destructor - Calls destructor of ElasticNode
      */
-    ~InnerNode() { this->~ElasticNode<KeyNodeIDPair>(); }
-
-    /*
-     * GetSplitSibling() - Split InnerNode into two halves.
-     *
-     * This function does not change the current node since all existing nodes
-     * should be read-only to avoid data race. It copies half of the inner node
-     * into the split sibling, and return the sibling node.
-     */
-    InnerNode *GetSplitSibling() const {
-      // Call function in class ElasticNode to determine the size of the
-      // inner node
-      int key_num = this->GetSize();
-
-      // Inner node size must be > 2 to avoid empty split node
-      TERRIER_ASSERT(key_num >= 2, "Inner node size must be > 2 to avoid empty split node");
-
-      // Same reason as in leaf node - since we only split inner node
-      // without a delta chain on top of it, the sep list size must equal
-      // the recorded item count
-      TERRIER_ASSERT(key_num == this->GetItemCount(), "the sep list size must equal the recorded item count");
-
-      int split_item_index = key_num / 2;
-
-      // This is the split point of the inner node
-      auto copy_start_it = this->Begin() + split_item_index;
-
-      // We need this to allocate enough space for the embedded array
-      auto sibling_size = static_cast<int>(std::distance(copy_start_it, this->End()));
-
-      // This sets metadata inside BaseNode by calling SetMetaData()
-      // inside inner node constructor
-      auto *inner_node_p = reinterpret_cast<InnerNode *>(ElasticNode<KeyNodeIDPair>::Get(
-          sibling_size, NodeType::InnerType, 0, sibling_size, this->At(split_item_index), this->GetHighKeyPair()));
-
-      // Call overloaded PushBack() to insert an array of elements
-      inner_node_p->PushBack(copy_start_it, this->End());
-
-      // Since we copy exactly that many elements
-      TERRIER_ASSERT(inner_node_p->GetSize() == sibling_size, "Copied number of elements must match.");
-      TERRIER_ASSERT(inner_node_p->GetSize() == inner_node_p->GetItemCount(), "Copied number of elements must match.");
-
-      return inner_node_p;
-    }
+    ~InnerNode() { this->~ElasticNode<KeyNodePointerPair>(); }
   };
 
   /*
@@ -870,146 +759,53 @@ class BPlusTree : public BPlusTreeBase {
      * Destructor - Calls underlying ElasticNode d'tor
      */
     ~LeafNode() { this->~ElasticNode<KeyValuePair>(); }
-
-    /*
-     * FindSplitPoint() - Find the split point that could divide the node
-     *                    into two even siblings
-     *
-     * If such point does not exist then we manage to find a point that
-     * divides the node into two halves that are as even as possible (i.e.
-     * make the size difference as small as possible)
-     *
-     * This function works by first finding the key on the exact central
-     * position, after which it scans forward to find a KeyValuePair
-     * with a different key. If this fails then it scans backwards to find
-     * a KeyValuePair with a different key.
-     *
-     * NOTE: If both split points would make an uneven division with one of
-     * the node size below the merge threshold, then we do not split,
-     * and return -1 instead. Otherwise the index of the spliting point
-     * is returned
-     */
-    int FindSplitPoint(const BPlusTree *t) const {
-      int central_index = this->GetSize() / 2;
-      TERRIER_ASSERT(central_index > 1, "Index out of range.");
-
-      // This will used as upper_bound and lower_bound key
-      const KeyValuePair &central_kvp = this->At(central_index);
-
-      // Move it to the element before data_list
-      auto it = this->Begin() + central_index - 1;
-
-      // If iterator has reached the begin then we know there could not
-      // be any split points
-      while ((it != this->Begin()) && t->KeyCmpEqual(it->first, central_kvp.first)) {
-        it--;
-      }
-
-      // This is the real split point
-      it++;
-
-      // This size is exactly the index of the split point
-      int left_sibling_size = std::distance(this->Begin(), it);
-
-      if (left_sibling_size > static_cast<int>(t->GetLeafNodeSizeLowerThreshold())) {
-        return left_sibling_size;
-      }
-
-      // Move it to the element after data_list
-      it = this->Begin() + central_index + 1;
-
-      // If iterator has reached the end then we know there could not
-      // be any split points
-      while ((it != this->End()) && t->KeyCmpEqual(it->first, central_kvp.first)) {
-        it++;
-      }
-
-      int right_sibling_size = std::distance(it, this->End());
-
-      if (right_sibling_size > static_cast<int>(t->GetLeafNodeSizeLowerThreshold())) {
-        return std::distance(this->Begin(), it);
-      }
-
-      return -1;
-    }
-
-    /*
-     * GetSplitSibling() - Split the node into two halves
-     *
-     * Although key-values are stored as independent pairs, we always split
-     * on the point such that no keys are separated on two leaf nodes
-     * This decision is made to make searching easier since now we could
-     * just do a binary search on the base page to decide whether a
-     * given key-value pair exists or not
-     *
-     * This function splits a leaf node into halves based on key rather
-     * than items. This implies the number of keys would be even, but no
-     * guarantee is made about the number of key-value items, which might
-     * be very unbalanced, cauing node size varing much.
-     *
-     * NOTE: This function allocates memory, and if it is not used
-     * e.g. by a CAS failure, then caller needs to delete it
-     *
-     * NOTE 2: Split key is stored in the low key of the new leaf node
-     *
-     * NOTE 3: This function assumes no out-of-bound key, i.e. all keys
-     * stored in the leaf node are < high key. This is valid since we
-     * already filtered out those key >= high key in consolidation.
-     *
-     * NOTE 4: On failure of split (i.e. could not find a split key that evenly
-     * or almost evenly divide the leaf node) then the return value of this
-     * function is nullptr
-     */
-    LeafNode *GetSplitSibling(const BPlusTree *t) const {
-      // When we split a leaf node, it is certain that there is no delta
-      // chain on top of it. As a result, the number of items must equal
-      // the actual size of the data list
-      TERRIER_ASSERT(this->GetSize() == this->GetItemCount(),
-                     "the number of items does not equal the actual size of the data list");
-
-      // This is the index of the actual key-value pair in data_list
-      // We need to substract this value from the prefix sum in the new
-      // inner node
-      int split_item_index = FindSplitPoint(t);
-
-      // Could not split because we could not find a split point
-      // and the caller is responsible for not spliting the node
-      // This should happen relative infrequently, in a sense that
-      // oversized page would affect performance
-      if (split_item_index == -1) {
-        return nullptr;
-      }
-
-      // This is an iterator pointing to the split point in the vector
-      // note that std::advance() operates efficiently on std::vector's
-      // RandomAccessIterator
-      auto copy_start_it = this->Begin() + split_item_index;
-
-      // This is the end point for later copy of data
-      auto copy_end_it = this->End();
-
-      // This is the key part of the key-value pair, also the low key
-      // of the new node and new high key of the current node (will be
-      // reflected in split delta later in its caller)
-      const KeyType &split_key = copy_start_it->first;
-
-      auto sibling_size = static_cast<int>(std::distance(copy_start_it, copy_end_it));
-
-      // This will call SetMetaData inside its constructor
-      auto *leaf_node_p = reinterpret_cast<LeafNode *>(
-          ElasticNode<KeyValuePair>::Get(sibling_size, NodeType::LeafType, 0, sibling_size,
-                                         std::make_pair(split_key, ~INVALID_NODE_ID), this->GetHighKeyPair()));
-
-      // Copy data item into the new node using PushBack()
-      leaf_node_p->PushBack(copy_start_it, copy_end_it);
-
-      TERRIER_ASSERT(leaf_node_p->GetSize() == sibling_size, "Copied number of elements must match.");
-      TERRIER_ASSERT(leaf_node_p->GetSize() == leaf_node_p->GetItemCount(), "Copied number of elements must match.");
-
-      return leaf_node_p;
-    }
   };
 
+  public:
+  // Key comparator
+  const KeyComparator key_cmp_obj;
+
+  // Raw key eq checker
+  const KeyEqualityChecker key_eq_obj;
+
+  // Raw key hasher
+  const KeyHashFunc key_hash_obj;
+
+  // Check whether values are equivalent
+  const ValueEqualityChecker value_eq_obj;
+
+  // Hash ValueType into a size_t
+  const ValueHashFunc value_hash_obj;
+
+  // The following three are used for std::pair<KeyType, NodeID>
+  const KeyNodePointerPairComparator key_node_id_pair_cmp_obj;
+  const KeyNodePointerPairEqualityChecker key_node_id_pair_eq_obj;
+
+  // The following two are used for hashing KeyValuePair
+  const KeyValuePairComparator key_value_pair_cmp_obj;
+  const KeyValuePairEqualityChecker key_value_pair_eq_obj;
+
+
+  BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
+         KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
+         ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{}, ValueHashFunc p_value_hash_obj = ValueHashFunc{})
+      : BPlusTreeBase(),
+        // Key comparator, equality checker and hasher
+        key_cmp_obj{p_key_cmp_obj},
+        key_eq_obj{p_key_eq_obj},
+        key_hash_obj{p_key_hash_obj},
+
+        // Value equality checker and hasher
+        value_eq_obj{p_value_eq_obj},
+        value_hash_obj{p_value_hash_obj},
+
+        // key-node ID pair cmp, equality checker and hasher
+        key_node_id_pair_cmp_obj{this},
+        key_node_id_pair_eq_obj{this},
+
+        // key-value pair cmp, equality checker and hasher
+        key_value_pair_cmp_obj{this},
+        key_value_pair_eq_obj{this} {}
 };  // class BPlusTree
 
 }  // namespace terrier::storage::index
