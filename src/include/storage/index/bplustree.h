@@ -695,6 +695,20 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     /*
+    FindLocation - Returns the start of the first element that compares
+    greater to the key provided
+    */
+    ElementType * FindLocation(const ElementType &element, BPlusTree * tree) {
+
+      ElementType * iter = Begin();
+      while((iter != end) &&
+        (!tree->KeyCmpGreater(iter->first, element.first))) iter++;
+      return iter;
+    }
+
+
+
+    /*
      * GetSize() - Returns the size of the embedded list
      *
      * Note that the return type is integer since we use integer to represent
