@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdio.h>
 #include <functional>
 
 namespace terrier::storage::index {
@@ -400,9 +401,7 @@ class BPlusTree : public BPlusTreeBase {
     // sum of its two children
     short depth;
 
-    // This counts the number of items alive inside the Node
-    // when consolidating nodes, we use this piece of information
-    // to reserve space for the new node
+    // This counts the total number of items in the node
     int item_count;
 
     /*
@@ -523,6 +522,21 @@ class BPlusTree : public BPlusTreeBase {
      * SetHighKeyPair() - Sets the high key pair of metdtata
      */
     inline void SetHighKeyPair(const KeyNodePointerPair *p_high_key_p) { metadata.high_key_p = p_high_key_p; }
+
+    /*
+      SetType() - Sets the type of metadata
+    */
+    inline void SetType(const NodeType input_type) {metadata.type = input_type;}
+
+    /*
+      SetDepth() - Sets the depth of metadata
+    */
+    inline void SetDepth(const short input_depth) {metadata.depth = input_depth;}
+
+    /*
+      SetItemCount() - Sets the item_count of metadata
+    */
+    inline void SetItemCount(const int input_item_count) {metadata.item_count = input_item_count;}
   };
 
   /*
@@ -576,25 +590,25 @@ class BPlusTree : public BPlusTreeBase {
       return node_p;
     }
 
-    /*
-     * Destructor
-     *
-     * All element types are destroyed inside the destruction function. D'tor
-     * is called by Destroy(), and therefore should not be called directly
-     * by external functions.
-     *
-     * Note that this is not called by Destroy() and instead it should be
-     * called by an external function that destroies a delta chain, since in one
-     * instance of thie class there might be multiple nodes of different types
-     * so destroying should be dont individually with each type.
-     */
-    ~ElasticNode() {
-      // Use two iterators to iterate through all existing elements
+
+    void FreeElasticNode() {
       for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
         // Manually calls destructor when the node is destroyed
         element_p->~ElementType();
       }
+      ElasticNode *beginningAllocation = this;
+      delete[] reinterpret_cast<char *>(beginningAllocation); 
     }
+
+    /*
+     IntializeEnd() - Make end = start
+    */
+    inline void InitializeEnd() {end = start;}
+
+    /*
+     SetEnd() - Make end = start + offset
+    */
+    inline void SetEnd(int offset) {end = start + offset;}
 
     /*
      * Begin() - Returns a begin iterator to its internal array
@@ -619,14 +633,6 @@ class BPlusTree : public BPlusTreeBase {
     inline const ElementType *REnd() { return start - 1; }
 
     inline const ElementType *REnd() const { return start - 1; }
-
-    /*
-     * GetSize() - Returns the size of the embedded list
-     *
-     * Note that the return type is integer since we use integer to represent
-     * the size of a node
-     */
-    inline int GetSize() const { return static_cast<int>(End() - Begin()); }
 
     /*
      * PushBack() - Push back an element
@@ -660,6 +666,62 @@ class BPlusTree : public BPlusTreeBase {
 
    public:
     /*
+    insertElementIfPossible - Returns true if inserted and false if node full
+    Inserts at location provided.
+    */
+    bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
+      if(GetSize() >= this->GetItemCount()) return false;
+      if(end - location > 0)
+      memmove(location + 1, location, (end - location)*sizeof(ElementType));
+      new (location) ElementType{element};
+      end = end + 1;
+      return true;
+    }
+
+    /*
+    SplitNode - Splits the current node and returns a pointer to the new node. 
+    Returns NULL if node is not already full
+    */
+    ElasticNode * SplitNode() {
+      if(this->GetSize() < this->GetItemCount()) return NULL;
+      ElasticNode * new_node = this->Get(this->GetSize(), this->GetType(), this->GetDepth(),
+        this->GetItemCount(), *this->GetElasticLowKeyPair(), *this->GetElasticHighKeyPair());
+      ElementType * copy_from_location = Begin() + ((this->GetSize()) / 2);
+      memmove(new_node->Begin(), copy_from_location,
+        (end - copy_from_location)*sizeof(ElementType));
+      end = copy_from_location;
+      new_node->SetEnd((end - copy_from_location));
+      return new_node;
+    }
+
+    /*
+     * GetSize() - Returns the size of the embedded list
+     *
+     * Note that the return type is integer since we use integer to represent
+     * the size of a node
+     */
+    inline int GetSize() const { return static_cast<int>(End() - Begin()); }
+     /*
+     * SetElasticLowKeyPair() - Sets the low key of Elastic Node
+     */
+    inline void SetElasticLowKeyPair(const KeyNodePointerPair &p_low_key) { low_key = p_low_key; }
+
+    /*
+     * SetElasticHighKeyPair() - Sets the high key of Elastic Node
+     */
+    inline void SetElasticHighKeyPair(const KeyNodePointerPair &p_high_key) { high_key = p_high_key; }
+
+    /*
+     * GetElasticLowKeyPair() - Returns a pointer to the low key current Elastic node
+     */
+    inline KeyNodePointerPair *GetElasticLowKeyPair() { return &low_key; }
+
+    /*
+     * GetElasticHighKeyPair() - Returns a pointer to the high key of current Elastic node
+     */
+    inline KeyNodePointerPair *GetElasticHighKeyPair() { return &high_key; }
+
+    /*
      * Get() - Static helper function that constructs a elastic node of
      *         a certain size
      *
@@ -682,11 +744,16 @@ class BPlusTree : public BPlusTreeBase {
       // Note: do not make it constant since it is going to be modified
       // after being returned
       auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType)];
-      auto *node_p = reinterpret_cast<ElasticNode *>(alloc_base);
-
-      // Call placement new to initialize all that could be initialized
-      new (node_p) ElasticNode{p_type, p_depth, p_item_count, p_low_key, p_high_key};
-      return node_p;
+      auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
+      elastic_node->SetLowKeyPair(elastic_node->GetElasticLowKeyPair());
+      elastic_node->SetHighKeyPair(elastic_node->GetElasticHighKeyPair());
+      elastic_node->SetItemCount(p_item_count);
+      elastic_node->SetType(p_type);
+      elastic_node->SetDepth(p_depth);
+      elastic_node->SetElasticLowKeyPair(p_low_key);
+      elastic_node->SetElasticHighKeyPair(p_high_key);
+      elastic_node->InitializeEnd();
+      return elastic_node;
     }
 
     /*
