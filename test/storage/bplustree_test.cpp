@@ -237,6 +237,57 @@ void FindLocationTest(){
 
 }
 
+void PopBeginTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
+  BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
+
+  // Get inner Node
+  auto node = BPlusTree<int, TupleSlot>::ElasticNode<BPlusTree<int, TupleSlot>::KeyNodePointerPair>::Get(10, BPlusTree<int, TupleSlot>::NodeType::LeafType, 0, 10, p1, p2);
+  
+  // To check if we can read what we inserted
+  std::vector<BPlusTree<int, TupleSlot>::KeyNodePointerPair> values;
+  for(unsigned i = 0; i < 10; i++) {
+    BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
+    p1.first = i;
+    node->PushBack(p1);
+    EXPECT_EQ(node->GetSize(), i+1);
+  }
+
+  using ElementType = BPlusTree<int, TupleSlot>::KeyNodePointerPair;
+  unsigned i = 0;
+  while(node->PopBegin()) {
+  	i++;
+  	unsigned j = i;
+	for (ElementType *element_p = node->Begin(); element_p != node->End(); element_p++) {
+	  EXPECT_EQ(element_p->first, j);
+	  j++;
+	}
+	EXPECT_EQ(j, 10);
+  }
+
+  EXPECT_EQ(i, 10);
+
+  // To Check if we are inserting at the correct place
+  EXPECT_EQ(reinterpret_cast<char *>(node) + 
+    sizeof(BPlusTree<int, TupleSlot>::ElasticNode<BPlusTree<int, TupleSlot>>), 
+    reinterpret_cast<char *>(node->Begin()));
+
+  EXPECT_EQ(&(node->GetLowKeyPair()), node->GetElasticLowKeyPair());
+  EXPECT_EQ(&(node->GetHighKeyPair()), node->GetElasticHighKeyPair());
+  EXPECT_EQ(node->GetLowKeyPair().first, p1.first);
+  EXPECT_EQ(node->GetHighKeyPair().first, p2.first);
+  EXPECT_NE(&p1, &(node->GetLowKeyPair()));
+  EXPECT_NE(&p2, &(node->GetHighKeyPair()));
+
+  // Free the node - should not result in an ASAN
+  node->FreeElasticNode();
+  delete bplustree;
+
+
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, NodeStructuralTests) {
@@ -246,6 +297,7 @@ TEST_F(BPlusTreeTests, NodeStructuralTests) {
   InsertElementInNodeRandomTest();
   SplitNodeTest();
   FindLocationTest();
+  PopBeginTest();
 }
 
 void BasicBPlusTreeInsertTestNoSplittingOfRoot() {

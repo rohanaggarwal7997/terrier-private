@@ -697,6 +697,22 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     /*
+    Pop Begin - Pops the first element from the list
+    Returns False if empty
+    */
+    bool PopBegin() {
+      if(this->GetSize() == 0) return false;
+      if(this->GetSize() == 1) {
+        SetEnd(0);
+        return true;
+      }
+      memmove(start, start + 1,
+        (this->GetSize() - 1)*sizeof(ElementType));
+      SetEnd(this->GetSize() - 1);
+      return true;
+    }
+
+    /*
     FindLocation - Returns the start of the first element that compares
     greater to the key provided
     */
@@ -974,8 +990,11 @@ class BPlusTree : public BPlusTreeBase {
             splitted_node->FindLocation(inner_node_element.first, this));
         }
 
+        splitted_node->GetElasticLowKeyPair()->second =
+          splitted_node->Begin()->second;
         inner_node_element.first = splitted_node->Begin()->first;
         inner_node_element.second = splitted_node;
+        splitted_node->PopBegin();
       }    
     }
 
@@ -997,7 +1016,6 @@ class BPlusTree : public BPlusTreeBase {
       new_root_node->InsertElementIfPossible(inner_node_element,
       new_root_node->FindLocation(inner_node_element.first, this));
     }
-
     return;
   }
 
