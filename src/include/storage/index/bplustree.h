@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <functional>
 #include <iostream>
+#include <queue>
 
 namespace terrier::storage::index {
 
@@ -893,6 +894,86 @@ class BPlusTree : public BPlusTreeBase {
     Get Root - Returns the current root
   */
   inline BaseNode * GetRoot() {return root;}
+
+
+  /*
+    Tries to find key by Traversing down the BplusTree
+    Returns true if found
+    Returns false if not found
+  */
+  bool IsPresent(KeyType key) {
+    if(root == NULL) {
+      return false;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(key, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if(index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      }
+      else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    for (KeyValuePair * element_p = node->Begin();
+      element_p!=node->End(); element_p ++) {
+      if(element_p->first == key) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /*
+    Traverses Down the root in a BFS manner and frees all the nodes
+  */
+  void FreeTree() {
+    if(root == NULL) return;
+    std::queue<BaseNode *> bfs_queue;
+    std::queue<BaseNode *> all_nodes;
+    bfs_queue.push(root);
+
+    while(!bfs_queue.empty()) {
+      BaseNode * node = bfs_queue.front();
+      bfs_queue.pop();
+      all_nodes.push(node);
+      if(node->GetType() != NodeType::LeafType) {
+        bfs_queue.push(node->GetLowKeyPair().second);
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair * element_p = current_node->Begin();
+          element_p!=current_node->End(); element_p ++) {
+          bfs_queue.push(element_p->second);
+        }
+      }
+    }
+
+    while(!all_nodes.empty()) {
+      BaseNode * node = all_nodes.front();
+      all_nodes.pop();
+      if(node->GetType() != NodeType::LeafType) {
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        current_node->FreeElasticNode();
+      } else {
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+        current_node->FreeElasticNode();
+      }
+    }
+  }
+
+
 
   /*
     Insert - adds element in the tree

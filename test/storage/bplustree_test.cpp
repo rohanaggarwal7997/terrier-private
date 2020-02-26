@@ -366,12 +366,34 @@ void BasicBPlusTreeInsertTestSplittingOfRootOnce() {
   delete bplustree;
 }
 
+void LargeKeyInsertAndRetrievalTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  for(unsigned i=0; i<100000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = i;
+    bplustree->Insert(p1);
+  }
+
+  for(int i=0; i<100000; i++) {
+  	EXPECT_EQ(bplustree->IsPresent(i), true);
+  }
+
+  for(int i = 100000; i < 200000; i++) {
+  	EXPECT_EQ(bplustree->IsPresent(i), false);
+  }
+
+  bplustree->FreeTree();
+  delete bplustree;
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
 
   BasicBPlusTreeInsertTestNoSplittingOfRoot();
   BasicBPlusTreeInsertTestSplittingOfRootOnce();
+  LargeKeyInsertAndRetrievalTest();
 }
 
 } // namespace terrier::storage::index
