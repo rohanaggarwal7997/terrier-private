@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <functional>
+#include <iostream>
 
 namespace terrier::storage::index {
 
@@ -396,9 +397,7 @@ class BPlusTree : public BPlusTreeBase {
     // The type of the node; this is forced to be represented as a short type
     NodeType type;
 
-    // This is the depth of current delta chain
-    // For merge delta node, the depth of the delta chain is the
-    // sum of its two children
+    // This is the height of the node
     short depth;
 
     // This counts the total number of items in the node
@@ -504,7 +503,7 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     /*
-     * GetDepth() - Returns the depth of the current node
+     * GetDepth() - Returns the Height of the Node
      */
     inline int GetDepth() const { return metadata.depth; }
 
@@ -687,6 +686,7 @@ class BPlusTree : public BPlusTreeBase {
       ElasticNode * new_node = this->Get(this->GetSize(), this->GetType(), this->GetDepth(),
         this->GetItemCount(), *this->GetElasticLowKeyPair(), *this->GetElasticHighKeyPair());
       ElementType * copy_from_location = Begin() + ((this->GetSize()) / 2);
+      // Can be memcopy
       memmove(new_node->Begin(), copy_from_location,
         (end - copy_from_location)*sizeof(ElementType));
       end = copy_from_location;
@@ -876,8 +876,17 @@ class BPlusTree : public BPlusTreeBase {
   */
   inline BaseNode * GetRoot() {return root;}
 
+  /*
+    Insert - adds element in the tree
+    The structure followed in the code is the lowKeyPointerPair's pointer represents
+    the leftmost pointer. While for all other nodes their pointer go to a node on their
+    right, ie containing values with keys greater than them.
+  */
+
   void Insert(const KeyValuePair element) {
 
+    /* If root is NULL then we make a Leaf Node.
+    */
     if(root == NULL) {
       KeyNodePointerPair p1, p2;
       p1.first = element.first;
@@ -898,8 +907,12 @@ class BPlusTree : public BPlusTreeBase {
     while(current_node->GetType() != NodeType::LeafType) {
       node_list.push_back(current_node);
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
       auto index_pointer = node->FindLocation(element.first, this);
-      if(index_pointer != node->Start()) {
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if(index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
       }
@@ -907,14 +920,24 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     bool finished_insertion = false;
+    // We maintain the element that we have to recursively insert up.
+    // This is the element that has to be inserted into the inner nodes.
     KeyNodePointerPair inner_node_element;
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
     if(node->InsertElementIfPossible(element, node->FindLocation(element.first, this))) {
+      // If you can directly insert in the leaf - Insertion is over
       finished_insertion = true;
     } else {
+      // Otherwise you split the node
+      // Now pay attention to the fact that when we copy up the right pointer
+      // remains same and the new node after splitting that gets returned to us
+      // becomes the right pointer.
+      // Thus our inner node element will contain the first key of the splitted
+      // Node and a pointer to the splitted node.
       auto splitted_node = node->SplitNode();
       auto splitted_node_begin = splitted_node->Begin();
-      if(splitted_node_begin->first > element) {
+      // To decide which leaf to put in the element
+      if(splitted_node_begin->first > element.first) {
         node->InsertElementIfPossible(element, node->FindLocation(element.first, this));
       } else {
         splitted_node->InsertElementIfPossible(element,
@@ -929,18 +952,24 @@ class BPlusTree : public BPlusTreeBase {
       auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_list.rbegin());
       node_list.pop_back();
 
+      // If we can insert element now without splitting then we are done
       if(inner_node->InsertElementIfPossible(inner_node_element,
         inner_node->FindLocation(inner_node_element.first, this))) {
         finished_insertion = true;
       } else {
-        auto splitted_node = node->SplitNode();
+        // otherwise we have to recursively split again
+
+        /*TODO: Some problem here - the leftmost pointer is not set properly
+        Have to add code to set it properly*/
+
+        auto splitted_node = inner_node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
-        if(splitted_node_begin->first > element) {
-          node->InsertElementIfPossible(element,
-            node->FindLocation(element.first, this));
+        if(splitted_node_begin->first > inner_node_element.first) {
+          inner_node->InsertElementIfPossible(inner_node_element,
+            inner_node->FindLocation(inner_node_element.first, this));
         } else {
-          splitted_node->InsertElementIfPossible(element,
-            splitted_node->FindLocation(element.first, this));
+          splitted_node->InsertElementIfPossible(inner_node_element,
+            splitted_node->FindLocation(inner_node_element.first, this));
         }
 
         inner_node_element.first = splitted_node->Begin()->first;
@@ -948,6 +977,8 @@ class BPlusTree : public BPlusTreeBase {
       }    
     }
 
+    // If still insertion is not finished we have to split the root node.
+    // Remember the root must have been split by now.
     if(!finished_insertion) {
       auto old_root = root;
       KeyNodePointerPair p1, p2;
@@ -958,9 +989,7 @@ class BPlusTree : public BPlusTreeBase {
       root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_,
                                    NodeType::InnerType, root->GetDepth() + 1,
                                    leaf_node_size_upper_threshold_,
-                                   p1, p2);
-      /*This matters as my right should be the thing that is being carried on.*/
-      inner_node_element.second = inner_node_element.secon; 
+                                   p1, p2); 
       auto new_root_node =
       reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);
       new_root_node->InsertElementIfPossible(inner_node_element,
