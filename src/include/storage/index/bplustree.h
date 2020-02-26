@@ -607,7 +607,9 @@ class BPlusTree : public BPlusTreeBase {
     /*
      SetEnd() - Make end = start + offset
     */
-    inline void SetEnd(int offset) {end = start + offset;}
+    inline void SetEnd(int offset) {
+      end = start + offset;
+    }
 
     /*
      * Begin() - Returns a begin iterator to its internal array
@@ -689,8 +691,8 @@ class BPlusTree : public BPlusTreeBase {
       // Can be memcopy
       memmove(new_node->Begin(), copy_from_location,
         (end - copy_from_location)*sizeof(ElementType));
-      end = copy_from_location;
       new_node->SetEnd((end - copy_from_location));
+      end = copy_from_location;
       return new_node;
     }
 

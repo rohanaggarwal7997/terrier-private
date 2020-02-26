@@ -174,6 +174,8 @@ void SplitNodeTest(){
     i++;
   }
 
+  EXPECT_EQ(i, 10);
+
   EXPECT_EQ(&(node->GetLowKeyPair()), node->GetElasticLowKeyPair());
   EXPECT_EQ(&(node->GetHighKeyPair()), node->GetElasticHighKeyPair());
   EXPECT_EQ(node->GetLowKeyPair().first, p1.first);
