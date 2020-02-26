@@ -899,8 +899,11 @@ class BPlusTree : public BPlusTreeBase {
       node_list.push_back(current_node);
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       auto index_pointer = node->FindLocation(element.first, this);
-      if(index_pointer != node->End()) current_node = index_pointer->second;
-      else current_node = node->GetHighKeyPair().second;
+      if(index_pointer != node->Start()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      }
+      else current_node = node->GetLowKeyPair().second;
     }
 
     bool finished_insertion = false;
@@ -911,9 +914,15 @@ class BPlusTree : public BPlusTreeBase {
     } else {
       auto splitted_node = node->SplitNode();
       auto splitted_node_begin = splitted_node->Begin();
-      auto splitted_node_end = splitted_node->End();
+      if(splitted_node_begin->first > element) {
+        node->InsertElementIfPossible(element, node->FindLocation(element.first, this));
+      } else {
+        splitted_node->InsertElementIfPossible(element,
+          splitted_node->FindLocation(element.first, this));
+      }
 
-
+      inner_node_element.first = splitted_node->Begin()->first;
+      inner_node_element.second = splitted_node;
     }
 
     while(!finished_insertion && node_list.size() > 0) {
@@ -924,7 +933,18 @@ class BPlusTree : public BPlusTreeBase {
         inner_node->FindLocation(inner_node_element.first, this))) {
         finished_insertion = true;
       } else {
-        
+        auto splitted_node = node->SplitNode();
+        auto splitted_node_begin = splitted_node->Begin();
+        if(splitted_node_begin->first > element) {
+          node->InsertElementIfPossible(element,
+            node->FindLocation(element.first, this));
+        } else {
+          splitted_node->InsertElementIfPossible(element,
+            splitted_node->FindLocation(element.first, this));
+        }
+
+        inner_node_element.first = splitted_node->Begin()->first;
+        inner_node_element.second = splitted_node;
       }    
     }
 
@@ -933,13 +953,14 @@ class BPlusTree : public BPlusTreeBase {
       KeyNodePointerPair p1, p2;
       p1.first = inner_node_element.first; /*This is a dummy initialization*/
       p2.first = inner_node_element.first; /*This is a dummy initialization*/
-      p1.second = NULL;                    /*This is a dummy initialization*/
-      p2.second = inner_node_element.second; /*This initialization matters*/
+      p1.second = old_root;                 /*This initialization matters*/
+      p2.second = NULL; /*This is a dummy initialization*/
       root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_,
                                    NodeType::InnerType, root->GetDepth() + 1,
                                    leaf_node_size_upper_threshold_,
                                    p1, p2);
-      inner_node_element.second = old_root; /*This matters as my left should be old root*/
+      /*This matters as my right should be the thing that is being carried on.*/
+      inner_node_element.second = inner_node_element.secon; 
       auto new_root_node =
       reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);
       new_root_node->InsertElementIfPossible(inner_node_element,
