@@ -11,7 +11,7 @@ namespace terrier::storage::index {
 struct BPlusTreeTests : public TerrierTest {};
 
 void BasicNodeInitializationInsertReadAndFreeTest(){
-	auto bwtree = new BPlusTree<int, TupleSlot>;
+	auto bplustree = new BPlusTree<int, TupleSlot>;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
 
@@ -50,12 +50,12 @@ void BasicNodeInitializationInsertReadAndFreeTest(){
 
  	// Free the node - should not result in an ASAN
  	node->FreeElasticNode();
- 	delete bwtree;
+ 	delete bplustree;
 
 }
 
 void InsertElementInNodeTest(){
-	auto bwtree = new BPlusTree<int, TupleSlot>;
+	auto bplustree = new BPlusTree<int, TupleSlot>;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
 
@@ -91,12 +91,12 @@ void InsertElementInNodeTest(){
 
  	// Free the node - should not result in an ASAN
  	node->FreeElasticNode();
- 	delete bwtree;
+ 	delete bplustree;
 
 }
 
 void InsertElementInNodeRandomTest(){
-	auto bwtree = new BPlusTree<int, TupleSlot>;
+	auto bplustree = new BPlusTree<int, TupleSlot>;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
 
@@ -137,12 +137,12 @@ void InsertElementInNodeRandomTest(){
 
  	// Free the node - should not result in an ASAN
  	node->FreeElasticNode();
- 	delete bwtree;
+ 	delete bplustree;
 
 }
 
 void SplitNodeTest(){
-	auto bwtree = new BPlusTree<int, TupleSlot>;
+	auto bplustree = new BPlusTree<int, TupleSlot>;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
 
@@ -191,11 +191,11 @@ void SplitNodeTest(){
  	// Free the node - should not result in an ASAN
  	node->FreeElasticNode();
  	newnode->FreeElasticNode();
- 	delete bwtree;
+ 	delete bplustree;
 }
 
 void FindLocationTest(){
-	auto bwtree = new BPlusTree<int, TupleSlot>;
+	auto bplustree = new BPlusTree<int, TupleSlot>;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
  	BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
 
@@ -209,8 +209,7 @@ void FindLocationTest(){
  		s.insert(k);
  		BPlusTree<int, TupleSlot>::KeyNodePointerPair p;
  		p.first = k;
-
- 		EXPECT_EQ(node->InsertElementIfPossible(p, node->FindLocation(p, bwtree)),true);
+ 		EXPECT_EQ(node->InsertElementIfPossible(p, node->FindLocation(k, bplustree)),true);
  	}
  	auto iter = node->Begin();
  	for(auto & elem: s) {
@@ -232,7 +231,7 @@ void FindLocationTest(){
 
  	// Free the node - should not result in an ASAN
  	node->FreeElasticNode();
- 	delete bwtree;
+ 	delete bplustree;
 
 }
 
@@ -246,4 +245,33 @@ TEST_F(BPlusTreeTests, NodeStructuralTests) {
  	SplitNodeTest();
  	FindLocationTest();
 }
+
+void BasicBPlusTreeInsertTestNoSplittingOfRoot() {
+
+	auto bplustree = new BPlusTree<int, TupleSlot>;
+	for(unsigned i=0; i<100; i++) {
+		BPlusTree<int, TupleSlot>::KeyValuePair p1;
+		p1.first = i;
+		bplustree->Insert(p1);
+	}
+
+	using ElementType = BPlusTree<int, TupleSlot>::KeyValuePair;
+
+	auto node = reinterpret_cast<BPlusTree<int, TupleSlot>::ElasticNode<ElementType> *>(bplustree->GetRoot()); 
+	unsigned i = 0;
+ 	for (ElementType *element_p = node->Begin(); element_p != node->End(); element_p++) {
+ 		EXPECT_EQ(element_p->first, i);
+ 		i++;
+ 	}
+ 	EXPECT_EQ(i, 100);
+ 	node->FreeElasticNode();
+	delete bplustree;
+}
+
+// NOLINTNEXTLINE
+TEST_F(BPlusTreeTests, InsertTests) {
+
+ 	BasicBPlusTreeInsertTestNoSplittingOfRoot();
+}
+
 } // namespace terrier::storage::index

@@ -698,11 +698,11 @@ class BPlusTree : public BPlusTreeBase {
     FindLocation - Returns the start of the first element that compares
     greater to the key provided
     */
-    ElementType * FindLocation(const ElementType &element, BPlusTree * tree) {
+    ElementType * FindLocation(const KeyType &element, BPlusTree * tree) {
 
       ElementType * iter = Begin();
       while((iter != end) &&
-        (!tree->KeyCmpGreater(iter->first, element.first))) iter++;
+        (!tree->KeyCmpGreater(iter->first, element))) iter++;
       return iter;
     }
 
@@ -842,7 +842,7 @@ class BPlusTree : public BPlusTreeBase {
     ~LeafNode() { this->~ElasticNode<KeyValuePair>(); }
   };
 
-  public:
+
   // Key comparator
   const KeyComparator key_cmp_obj;
 
@@ -866,6 +866,88 @@ class BPlusTree : public BPlusTreeBase {
   const KeyValuePairComparator key_value_pair_cmp_obj;
   const KeyValuePairEqualityChecker key_value_pair_eq_obj;
 
+  private:
+  BaseNode * root;
+
+  public:
+
+  /*
+    Get Root - Returns the current root
+  */
+  inline BaseNode * GetRoot() {return root;}
+
+  void Insert(const KeyValuePair element) {
+
+    if(root == NULL) {
+      KeyNodePointerPair p1, p2;
+      p1.first = element.first;
+      p2.first = element.first;
+      p1.second = NULL;
+      p2.second = NULL;
+      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_,
+                                   NodeType::LeafType, 0,
+                                   leaf_node_size_upper_threshold_,
+                                   p1, p2);
+    }
+
+    BaseNode * current_node = root;
+    // Stack of pointers
+    std::vector<BaseNode *> node_list;
+
+    // Traversing Down and maintaining a stack of pointers
+    while(current_node->GetType() != NodeType::LeafType) {
+      node_list.push_back(current_node);
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      auto index_pointer = node->FindLocation(element.first, this);
+      if(index_pointer != node->End()) current_node = index_pointer->second;
+      else current_node = node->GetHighKeyPair().second;
+    }
+
+    bool finished_insertion = false;
+    KeyNodePointerPair inner_node_element;
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    if(node->InsertElementIfPossible(element, node->FindLocation(element.first, this))) {
+      finished_insertion = true;
+    } else {
+      auto splitted_node = node->SplitNode();
+      auto splitted_node_begin = splitted_node->Begin();
+      auto splitted_node_end = splitted_node->End();
+
+
+    }
+
+    while(!finished_insertion && node_list.size() > 0) {
+      auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_list.rbegin());
+      node_list.pop_back();
+
+      if(inner_node->InsertElementIfPossible(inner_node_element,
+        inner_node->FindLocation(inner_node_element.first, this))) {
+        finished_insertion = true;
+      } else {
+        
+      }    
+    }
+
+    if(!finished_insertion) {
+      auto old_root = root;
+      KeyNodePointerPair p1, p2;
+      p1.first = inner_node_element.first; /*This is a dummy initialization*/
+      p2.first = inner_node_element.first; /*This is a dummy initialization*/
+      p1.second = NULL;                    /*This is a dummy initialization*/
+      p2.second = inner_node_element.second; /*This initialization matters*/
+      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_,
+                                   NodeType::InnerType, root->GetDepth() + 1,
+                                   leaf_node_size_upper_threshold_,
+                                   p1, p2);
+      inner_node_element.second = old_root; /*This matters as my left should be old root*/
+      auto new_root_node =
+      reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);
+      new_root_node->InsertElementIfPossible(inner_node_element,
+      new_root_node->FindLocation(inner_node_element.first, this));
+    }
+
+    return;
+  }
 
   BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
          KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
@@ -886,7 +968,8 @@ class BPlusTree : public BPlusTreeBase {
 
         // key-value pair cmp, equality checker and hasher
         key_value_pair_cmp_obj{this},
-        key_value_pair_eq_obj{this} {}
+        key_value_pair_eq_obj{this},
+        root(NULL) {}
 };  // class BPlusTree
 
 }  // namespace terrier::storage::index
