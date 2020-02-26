@@ -299,6 +299,15 @@ void BasicBPlusTreeInsertTestSplittingOfRootOnce() {
     i++;
   }
   EXPECT_EQ(i, 129);
+
+  // Count no of elements in root node - should be 1
+  i = 0;
+  for (KeyPointerType * element_p = noderoot->Begin(); element_p!=noderoot->End(); element_p ++)
+  	i++;
+
+  EXPECT_EQ(i, 1);
+
+  // Only freeing these should free us of any ASAN
   node->FreeElasticNode();
   node2->FreeElasticNode();
   noderoot->FreeElasticNode();
