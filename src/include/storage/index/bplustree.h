@@ -1300,7 +1300,12 @@ class BPlusTree : public BPlusTreeBase {
       if (leaf_position != node->Begin()) {
         leaf_position -= 1;
         if (leaf_position->first == element.first) {
-          return node->Erase(leaf_position - node->Begin());
+          bool is_deleted = node->Erase(leaf_position - node->Begin());
+          if (is_deleted && node->GetSize() == 0) {
+            // all elements of tree are now deleted
+            root = NULL;
+          }
+          return is_deleted;
         } else {
           return false;
         }
