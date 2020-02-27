@@ -39,11 +39,6 @@ class BPlusTreeBase {
 
   // Dont know whether we need to keep Padded Data - so removed that for now.
  public:
-
- private:
-
-
- protected:
   /** @param inner_node_size_upper_threshold upper size threshold for inner node split to be assigned to this tree */
   void SetInnerNodeSizeUpperThreshold(int inner_node_size_upper_threshold) {
     inner_node_size_upper_threshold_ = inner_node_size_upper_threshold;
@@ -63,6 +58,11 @@ class BPlusTreeBase {
   void SetLeafNodeSizeLowerThreshold(int leaf_node_size_lower_threshold) {
     leaf_node_size_lower_threshold_ = leaf_node_size_lower_threshold;
   }
+
+ private:
+
+
+ protected:
 
   /** upper size threshold for inner node split */
   int inner_node_size_upper_threshold_ = INNER_NODE_SIZE_UPPER_THRESHOLD;

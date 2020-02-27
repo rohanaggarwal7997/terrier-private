@@ -366,7 +366,7 @@ void BasicBPlusTreeInsertTestSplittingOfRootOnce() {
   delete bplustree;
 }
 
-void LargeKeyInsertAndRetrievalTest() {
+void LargeKeySequentialInsertAndRetrievalTest() {
 
   auto bplustree = new BPlusTree<int, TupleSlot>;
   for(unsigned i=0; i<100000; i++) {
@@ -387,13 +387,43 @@ void LargeKeyInsertAndRetrievalTest() {
   delete bplustree;
 }
 
+void LargeKeyRandomInsertAndRetrievalTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  bplustree->SetInnerNodeSizeUpperThreshold(5);
+  bplustree->SetLeafNodeSizeUpperThreshold(5);
+  std::set<int> keys;
+  for(unsigned i=0; i<100000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    int k = rand()%500000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k); 
+    p1.first = k;
+    bplustree->Insert(p1);
+  }
+
+  for(int i=0; i<500000; i++) {
+    if(keys.find(i) != keys.end()) {
+      EXPECT_EQ(bplustree->IsPresent(i), true);
+    } else {
+      EXPECT_EQ(bplustree->IsPresent(i), false);
+    }
+  }
+  // hardcoded - maybe wrong
+  EXPECT_EQ(bplustree->GetRoot()->GetDepth(), 7);
+
+  bplustree->FreeTree();
+  delete bplustree;
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
 
   BasicBPlusTreeInsertTestNoSplittingOfRoot();
   BasicBPlusTreeInsertTestSplittingOfRootOnce();
-  LargeKeyInsertAndRetrievalTest();
+  LargeKeySequentialInsertAndRetrievalTest();
+  LargeKeyRandomInsertAndRetrievalTest();
 }
 
 } // namespace terrier::storage::index
