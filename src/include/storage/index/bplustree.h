@@ -1025,6 +1025,100 @@ class BPlusTree : public BPlusTreeBase {
     return return_answer;
   }
 
+  /*
+    SiblingForwardCheck - Expects a sorted set of the keys and then finds the
+    the least element and the leaf it is stored in. Traverses the right sibling
+    of the leaf to cover all the elements in the b+ tree and checks with the
+    sorted key set for their order. Verifies if a full scan (ascending) using the siblings
+    is correct or not.
+  */
+  bool SiblingForwardCheck(std::set<KeyType> &keys) {
+    int key = *keys.begin();
+    if(root == NULL) {
+      return false;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(key, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if(index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      }
+      else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    auto itr = keys.begin();
+    while(node != NULL) {
+      // iterate over all the values in the leaf node checking with the key set
+      for (KeyValuePair * element_p = node->Begin();
+           element_p!=node->End(); element_p++) {
+        if(element_p->first != *itr) {
+          return false;
+        }
+        itr++;
+      }
+      // current node checked, move to the next one
+      node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+    }
+    return true;
+  }
+
+  /*
+    SiblingBackwardCheck - Expects a sorted set of the keys and then finds the
+    the highest element and the leaf it is stored in. Traverses the left sibling
+    of the leaf to cover all the elements in the b+ tree and checks with the
+    sorted key set for their order. Verifies if a full scan (descending) using the siblings
+    is correct or not.
+  */
+  bool SiblingBackwardCheck(std::set<KeyType> &keys) {
+    int key = *keys.rbegin();
+    if(root == NULL) {
+      return false;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(key, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if(index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      }
+      else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    auto itr = keys.rbegin();
+    while(node != NULL) {
+      // iterate over all the values in the leaf node checking with the key set
+      for (KeyValuePair * element_p = node->End()-1;
+           element_p!=node->REnd(); element_p--) {
+        if(element_p->first != *itr) {
+          return false;
+        }
+        itr++;
+      }
+      // current node checked, move to the next one
+      node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+    }
+    return true;
+  }
+
 
 
   /*
@@ -1095,6 +1189,21 @@ class BPlusTree : public BPlusTreeBase {
           splitted_node->FindLocation(element.first, this));
       }
 
+      // Set the siblings correctly
+      // node_next = node_right
+      // node_next_left = splitted
+      // splitted_right = node_right
+      // node_right = splitted
+      // splitted_left = node
+      if(node->GetElasticHighKeyPair()->second != NULL) {
+        auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
+        node_next->GetElasticLowKeyPair()->second = splitted_node;
+      }
+      splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
+      node->GetElasticHighKeyPair()->second = splitted_node;
+      splitted_node->GetElasticLowKeyPair()->second = node;
+
+      // Set the inner node that needs to be passed to the parents
       inner_node_element.first = splitted_node->Begin()->first;
       inner_node_element.second = splitted_node;
     }
@@ -1112,7 +1221,6 @@ class BPlusTree : public BPlusTreeBase {
 
         /*TODO: Some problem here - the leftmost pointer is not set properly
         Have to add code to set it properly*/
-
         auto splitted_node = inner_node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
         if(splitted_node_begin->first > inner_node_element.first) {

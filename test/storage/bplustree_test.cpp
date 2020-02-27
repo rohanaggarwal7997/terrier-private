@@ -446,6 +446,28 @@ void StructuralIntegrityTestWithRandomInsert() {
   delete bplustree;  
 }
 
+void LargeKeyRandomInsertSiblingSequenceTest() {
+
+  // Insert keys
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  bplustree->SetInnerNodeSizeUpperThreshold(5);
+  bplustree->SetLeafNodeSizeUpperThreshold(5);
+  std::set<int> keys;
+  for(unsigned i=0; i<100000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    int k = rand()%500000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k);
+    p1.first = k;
+    bplustree->Insert(p1);
+  }
+
+  EXPECT_EQ(bplustree->SiblingForwardCheck(keys), true);
+  EXPECT_EQ(bplustree->SiblingBackwardCheck(keys), true);
+  bplustree->FreeTree();
+  delete bplustree;
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
@@ -455,6 +477,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   LargeKeySequentialInsertAndRetrievalTest();
   LargeKeyRandomInsertAndRetrievalTest();
   StructuralIntegrityTestWithRandomInsert();
+  LargeKeyRandomInsertSiblingSequenceTest();
 }
 
 } // namespace terrier::storage::index
