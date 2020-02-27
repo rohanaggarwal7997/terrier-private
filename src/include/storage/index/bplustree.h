@@ -1140,12 +1140,12 @@ class BPlusTree : public BPlusTreeBase {
       p2.first = inner_node_element.first; /*This is a dummy initialization*/
       p1.second = old_root;                 /*This initialization matters*/
       p2.second = NULL; /*This is a dummy initialization*/
-      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_,
+      root = ElasticNode<KeyNodePointerPair>::Get(inner_node_size_upper_threshold_,
                                    NodeType::InnerType, root->GetDepth() + 1,
-                                   leaf_node_size_upper_threshold_,
+                                   inner_node_size_upper_threshold_,
                                    p1, p2); 
       auto new_root_node =
-      reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);
+        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);
       new_root_node->InsertElementIfPossible(inner_node_element,
       new_root_node->FindLocation(inner_node_element.first, this));
     }
