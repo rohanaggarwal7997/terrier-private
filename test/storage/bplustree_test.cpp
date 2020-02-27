@@ -416,6 +416,36 @@ void LargeKeyRandomInsertAndRetrievalTest() {
   delete bplustree;
 }
 
+void StructuralIntegrityTestWithRandomInsert() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  // The size is set to 2 more because of the following
+  // When we split an inner node, we might end up deleting an element
+  // from right side without putting anything in the right side
+  // Hence the size may be 31 at some points if we used 64. 
+  bplustree->SetInnerNodeSizeUpperThreshold(66);
+  bplustree->SetLeafNodeSizeUpperThreshold(66);
+  bplustree->SetInnerNodeSizeLowerThreshold(32);
+  bplustree->SetLeafNodeSizeLowerThreshold(32);
+  std::set<int> keys;
+  for(unsigned i=0; i<100000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    int k = rand()%500000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k); 
+    p1.first = k;
+    bplustree->Insert(p1);
+  }
+
+  EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys.begin(), *keys.rbegin(),
+    keys, bplustree->GetRoot()), true);
+  // All keys found in the tree
+  EXPECT_EQ(keys.size(), 0);
+
+  bplustree->FreeTree();
+  delete bplustree;  
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
@@ -424,6 +454,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   BasicBPlusTreeInsertTestSplittingOfRootOnce();
   LargeKeySequentialInsertAndRetrievalTest();
   LargeKeyRandomInsertAndRetrievalTest();
+  StructuralIntegrityTestWithRandomInsert();
 }
 
 } // namespace terrier::storage::index
