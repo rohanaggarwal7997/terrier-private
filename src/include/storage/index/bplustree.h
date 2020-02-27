@@ -699,6 +699,26 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     /*
+     MergeNode - Merge a given node's entries to the current node.
+     Returns true if merge successful, false otherwise
+     */
+    bool MergeNode(ElasticNode * next_node) {
+      // Merge the right type
+      if (this->GetType() != next_node->GetType()) {
+        return false;
+      }
+
+      // Is Merging possible
+      if ((this->GetItemCount() - this->GetSize()) < next_node->GetSize()) {
+        return false;
+      }
+
+      memmove(this->End(), next_node->Begin(), (next_node->GetSize())*sizeof(ElementType));
+      SetEnd(this->GetSize() + next_node->GetSize());
+      return true;
+    }
+
+    /*
     Pop Begin - Pops the first element from the list
     Returns False if empty
     */
@@ -995,7 +1015,7 @@ class BPlusTree : public BPlusTreeBase {
           return false;
         }
         /* Size of Node is correct */
-        if(node->GetSize() < leaf_node_size_lower_threshold_ || 
+        if(node->GetSize() < leaf_node_size_lower_threshold_ ||
           node->GetSize() > leaf_node_size_upper_threshold_) {
           return false;
         }
