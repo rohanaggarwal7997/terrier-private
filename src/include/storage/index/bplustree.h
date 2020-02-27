@@ -5,6 +5,8 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <list>
+#include <unordered_map>
 
 namespace terrier::storage::index {
 
@@ -143,8 +145,8 @@ class BPlusTree : public BPlusTreeBase {
 
   // KeyType-NodeID pair
   using KeyNodePointerPair = std::pair<KeyType, BaseNode *>;
-  // KeyType-ValueType pair
-  using KeyValuePair = std::pair<KeyType, ValueType>;
+  // KeyType - List of ValueType pair
+  using KeyValuePair = std::pair<KeyType, std::list<ValueType> *>;
 
   /*
    * enum class NodeType - Bw-Tree node type
@@ -936,6 +938,44 @@ class BPlusTree : public BPlusTreeBase {
   }
 
   /*
+    Tries to find key by Traversing down the BplusTree
+    Returns the list of values of the key from lead if found
+    Returns null if not found
+  */
+  std::list<ValueType>* FindValueOfKey(KeyType key) {
+    if(root == NULL) {
+      return NULL;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(key, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if(index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      }
+      else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    for (KeyValuePair * element_p = node->Begin();
+         element_p!=node->End(); element_p ++) {
+      if(element_p->first == key) {
+        return element_p->second;
+      }
+    }
+
+    return NULL;
+  }
+
+  /*
     Traverses Down the root in a BFS manner and frees all the nodes
   */
   void FreeTree() {
@@ -969,6 +1009,12 @@ class BPlusTree : public BPlusTreeBase {
       } else {
         auto current_node = 
           reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+        for (KeyValuePair * element_p = current_node->Begin();
+             element_p!=current_node->End(); element_p ++) {
+          if(element_p->second != NULL) {
+            element_p->second->clear(); // destroy the list of values in a key
+          }
+        }
         current_node->FreeElasticNode();
       }
     }
@@ -1119,6 +1165,35 @@ class BPlusTree : public BPlusTreeBase {
     return true;
   }
 
+  /*
+   * This test checks if duplicate keys are correctly handled by the insert wrapper.
+   * For a b+ tree, with each key having multiple values, stored in a map keys_values
+   * check if the values_list in the tree have the same values as the map given
+   * in the function.
+   */
+  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::vector<ValueType> >& keys_values) {
+    auto itr = keys_values.begin();
+    for(;itr!=keys_values.end();itr++) {
+      KeyType k = itr->first;
+      std::vector<ValueType> values = keys_values[k];
+      std::list<ValueType> * values_list_p = FindValueOfKey(k);
+      if(values_list_p == NULL) {
+        return false;
+      }
+      auto it = values_list_p->begin();
+      for(unsigned j = 0; j < values.size(); j++) {
+        if (it == values_list_p->end()) {
+          return false;
+        }
+        if(values[j] != *(it)) {
+          return false;
+        }
+        it++;
+      }
+    }
+    return true;
+  }
+
 
 
   /*
@@ -1258,6 +1333,25 @@ class BPlusTree : public BPlusTreeBase {
       new_root_node->FindLocation(inner_node_element.first, this));
     }
     return;
+  }
+
+  /*    InsertWrapper - adds element in the tree
+   *    Checks if the key is available in the tree and
+   *    retrieves value list for the key. Appends the
+   *    value in the value list or inserts a
+   *    new list in the tree
+  */
+  void InsertWrapper(KeyType key, ValueType value) {
+    // retrieve the value list of the key from tree
+    std::list<ValueType> * value_list_p = FindValueOfKey(key);
+    if(value_list_p == NULL) { // list not exists
+      auto value_list = new std::list<ValueType>();
+      value_list->push_back(value);
+      Insert(KeyValuePair(key, value_list));
+    }
+    else { // just push back in the existing list
+      value_list_p->push_back(value);
+    }
   }
 
   BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
