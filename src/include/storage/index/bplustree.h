@@ -1012,7 +1012,8 @@ class BPlusTree : public BPlusTreeBase {
         for (KeyValuePair * element_p = current_node->Begin();
              element_p!=current_node->End(); element_p ++) {
           if(element_p->second != NULL) {
-            element_p->second->clear(); // destroy the list of values in a key
+            // destroy the list of values in a key
+            delete element_p->second;
           }
         }
         current_node->FreeElasticNode();
