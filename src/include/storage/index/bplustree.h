@@ -591,7 +591,9 @@ class BPlusTree : public BPlusTreeBase {
       return node_p;
     }
 
-
+    /*
+      Free elastic node
+    */
     void FreeElasticNode() {
       for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
         // Manually calls destructor when the node is destroyed
@@ -758,6 +760,23 @@ class BPlusTree : public BPlusTreeBase {
       SetEnd(this->GetSize() - 1);
       return true;
     }
+
+    /*
+    Erase - remove the element at index 'i' from the list
+    Returns False if empty
+    */
+    bool Erase(int i) {
+      if(this->GetSize() <= i) return false;
+      
+      if(this->GetSize() == 1) {
+        SetEnd(0);
+        return true;
+      }
+      memmove(start + i, start + i + 1,
+        (this->GetSize() - i - 1)*sizeof(ElementType));
+      SetEnd(this->GetSize() - 1);
+      return true;
+    }    
 
     /*
     FindLocation - Returns the start of the first element that compares
@@ -1195,6 +1214,133 @@ class BPlusTree : public BPlusTreeBase {
       new_root_node->FindLocation(inner_node_element.first, this));
     }
     return;
+  }
+
+  template<typename ElementType> 
+  void DeleteRebalance(ElasticNode<KeyNodePointerPair> * parent, 
+    ElasticNode<ElementType> * child, int index, int node_lower_threshold) {
+    if (child->GetSize() >= node_lower_threshold) {
+      return;
+    } 
+
+    // Need to rebalance
+    if (index > -1) {
+      ElasticNode<ElementType> * left_sibling;
+      if(index == 0) {
+        left_sibling = parent->GetLowKeyPair().second;
+      } else {
+        left_sibling = (parent->GetBegin() + index - 1)->second;
+      }
+
+      if(left_sibling->GetSize() > node_lower_threshold) {
+        // Borrow one
+        (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
+        child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
+        left_sibling->PopEnd();
+        return;
+      }
+    }
+
+    if(index < parent->GetSize() - 1) {
+      ElasticNode<ElementType> * right_sibling = (parent->Begin() + index + 1)->second;
+      if(right_sibling->GetSize() > node_lower_threshold) {
+        // Borrow one
+        child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
+        right_sibling->PopBegin();
+        (parent->Begin() + index)->first = right_sibling->Begin()->first; 
+        return;
+      }
+    }
+
+    // Cannot redistribute, so we perform merge
+    // We try to merge with left sibling first, if not possible 
+    // merge with right sibling   
+    if (index > -1) {
+      ElasticNode<ElementType> * left_sibling;
+      if(index == 0) {
+        left_sibling = parent->GetLowKeyPair().second;
+      } else {
+        left_sibling = (parent->GetBegin() + index - 1)->second;
+      }
+
+      left_sibling->Merge(child);
+      child->FreeElasticNode();
+      parent->Erase(index);
+    } else {
+      ElasticNode<ElementType> * right_sibling = (parent->GetBegin() + index + 1)->second;
+      child->Merge(right_sibling);
+      right_sibling->FreeElasticNode();
+      parent->Erase(index+1);
+    }
+
+    return;
+  } 
+
+  /*
+   * Delete() - Remove a key-value pair from the tree
+   *
+   * This function returns false if the key and value pair does not
+   * exist. Return true if delete succeeds
+   *
+   */
+  bool Delete(BaseNode* current_node, const KeyValuePair &element) {
+    // If tree is empty, return false
+    if (current_node == NULL) {
+      return false;
+    }
+
+    // If delete called on leaf node, just perform deletion
+    // Else, call delete on child and check if child becomes underfull
+    if (current_node->GetType() == NodeType:: LeafType) {
+      // Leaf Node case => delete element
+      auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+      auto leaf_position = node->FindLocation(element.first, this);
+      if (leaf_position != node->Begin()) {
+        leaf_position -= 1;
+        if (leaf_position->first == element.first) {
+          return node->Erase(leaf_position - node->Begin());
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else {
+      // Inner Node case => call delete element on child and check if child becomes underfull
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      auto child_position = node->FindLocation(element.first, this);
+      BaseNode* child_pointer;
+      int index;
+      if (child_position != node->Begin()) {
+        child_pointer = (child_position - 1)->second;
+        index = child_position - node->Begin() - 1;
+      } else {
+        child_pointer = node->GetLowKeyPair().second;
+        index = -1;
+      }
+      bool is_deleted = Delete(child_pointer, element);
+
+      // Now perform any rebalancing or merge on child if it becomes underfull
+      if (is_deleted) {
+        if (child_pointer->GetType() == NodeType:: LeafType) {
+          DeleteRebalance<KeyValuePair>(node, reinterpret_cast<ElasticNode<KeyValuePair> *>(child_pointer), 
+            index, GetLeafNodeSizeLowerThreshold());
+        } else {
+          DeleteRebalance<KeyNodePointerPair>(node, reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(child_pointer), 
+            index, GetInnerNodeSizeLowerThreshold());
+        }
+
+        // Check if this node is root and if its size becomes 0
+        if (current_node->GetSize() == 0) {
+          root = current_node->GetLowKeyPair().second;
+          current_node->FreeElasticNode();
+        }
+
+        return true;
+      } else {
+        return false;
+      }
+    }
   }
 
   BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},

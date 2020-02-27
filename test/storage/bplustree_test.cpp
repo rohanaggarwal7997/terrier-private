@@ -333,6 +333,51 @@ void PopEndTest() {
   delete bplustree;
 }
 
+void NodeElementEraseTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
+  BPlusTree<int, TupleSlot>::KeyNodePointerPair p2;
+
+  // Get inner Node
+  auto node = BPlusTree<int, TupleSlot>::ElasticNode<BPlusTree<int, TupleSlot>::KeyNodePointerPair>::Get(10, BPlusTree<int, TupleSlot>::NodeType::LeafType, 0, 10, p1, p2);
+
+  // To check if we can read what we inserted
+  for(unsigned i = 0; i < 10; i++) {
+    BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
+    p1.first = i;
+    node->PushBack(p1);
+    EXPECT_EQ(node->GetSize(), i+1);
+  }
+
+  //using ElementType = BPlusTree<int, TupleSlot>::KeyNodePointerPair;
+  unsigned i = 9;
+  while(node->Erase(i)) {
+    if (node->GetSize() <= 0) break; 
+    i--;
+    auto last = node->RBegin();
+    EXPECT_EQ(last->first, i);
+  }
+
+  EXPECT_EQ(i, 0);
+
+  // To Check if we are inserting at the correct place
+  EXPECT_EQ(reinterpret_cast<char *>(node) +
+            sizeof(BPlusTree<int, TupleSlot>::ElasticNode<BPlusTree<int, TupleSlot>>),
+            reinterpret_cast<char *>(node->Begin()));
+
+  EXPECT_EQ(&(node->GetLowKeyPair()), node->GetElasticLowKeyPair());
+  EXPECT_EQ(&(node->GetHighKeyPair()), node->GetElasticHighKeyPair());
+  EXPECT_EQ(node->GetLowKeyPair().first, p1.first);
+  EXPECT_EQ(node->GetHighKeyPair().first, p2.first);
+  EXPECT_NE(&p1, &(node->GetLowKeyPair()));
+  EXPECT_NE(&p2, &(node->GetHighKeyPair()));
+
+  // Free the node - should not result in an ASAN
+  node->FreeElasticNode();
+  delete bplustree;
+}
+
 void NodeMergeTest() {
   auto bplustree = new BPlusTree<int, TupleSlot>;
   BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
@@ -392,6 +437,7 @@ TEST_F(BPlusTreeTests, NodeStructuralTests) {
   FindLocationTest();
   PopBeginTest();
   PopEndTest();
+  NodeElementEraseTest();
   NodeMergeTest();
 }
 
@@ -482,6 +528,40 @@ void LargeKeySequentialInsertAndRetrievalTest() {
   delete bplustree;
 }
 
+void LargeKeySequentialInsertAndDeleteTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  for(unsigned i=0; i<100000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = i;
+    bplustree->Insert(p1);
+  }
+
+  for(int i=0; i<100000; i++) {
+    EXPECT_EQ(bplustree->IsPresent(i), true);
+  }
+
+  for(int i = 100000; i < 200000; i++) {
+    EXPECT_EQ(bplustree->IsPresent(i), false);
+  }
+
+  // delete certain elements
+  for(unsigned i=0; i<100000; i+=2) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = i;
+    bplustree->Delete(bplustree->GetRoot(), p1);
+  }
+
+  for(int i=0; i<100000; i+=2) {
+    EXPECT_EQ(bplustree->IsPresent(i), false);
+    EXPECT_EQ(bplustree->IsPresent(i+1), true);
+  }
+
+
+  bplustree->FreeTree();
+  delete bplustree;
+}
+
 void LargeKeyRandomInsertAndRetrievalTest() {
 
   auto bplustree = new BPlusTree<int, TupleSlot>;
@@ -550,6 +630,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   LargeKeySequentialInsertAndRetrievalTest();
   LargeKeyRandomInsertAndRetrievalTest();
   StructuralIntegrityTestWithRandomInsert();
+  LargeKeySequentialInsertAndDeleteTest();
 }
 
 } // namespace terrier::storage::index
