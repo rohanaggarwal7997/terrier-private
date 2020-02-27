@@ -4,6 +4,7 @@
 #include <functional>
 #include <iostream>
 #include <queue>
+#include <set>
 
 namespace terrier::storage::index {
 
@@ -971,6 +972,57 @@ class BPlusTree : public BPlusTreeBase {
         current_node->FreeElasticNode();
       }
     }
+  }
+
+  /*
+  StructuralIntegrityVerification - Recursively Tests the structural integrity of the data
+  structure. Verifies whether all the keys in the set are present in the tree. Verifies
+  all keys lie between the given range(This gets pruned as move down the tree). Also verifies
+  the size of each node.
+  Also erases all keys that are found in the tree from the input set
+  */
+  bool StructuralIntegrityVerification(KeyType low_key, KeyType high_key, std::set<KeyType> &keys,
+    BaseNode * current_node) {
+
+    bool return_answer = true;
+    if(current_node->GetType() == NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+      for (KeyValuePair * element_p = node->Begin();
+        element_p!=node->End(); element_p ++) {
+        /* All Keys within Range*/
+        if(this->KeyCmpGreater(low_key, element_p->first) ||
+          this->KeyCmpGreater(element_p->first, high_key)) {
+          return false;
+        }
+        /* Size of Node is correct */
+        if(node->GetSize() < leaf_node_size_lower_threshold_ || 
+          node->GetSize() > leaf_node_size_upper_threshold_) {
+          return false;
+        }
+        keys.erase(element_p->first);
+      }
+    } else {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      /* Size of Node is correct */
+      if(node->GetSize() < inner_node_size_lower_threshold_ || 
+        node->GetSize() > inner_node_size_upper_threshold_) {
+        return false;
+      }
+      return_answer &= this->StructuralIntegrityVerification(low_key, node->Begin()->first, keys,
+        current_node->GetLowKeyPair().second);
+
+      KeyNodePointerPair * iter = node->Begin();
+      while((iter + 1) != node->End()) {
+        low_key = iter->first; 
+        return_answer &= this->StructuralIntegrityVerification(low_key, (iter + 1)->first, keys,
+        iter->second);
+        iter++;
+      }
+
+      return_answer &= this->StructuralIntegrityVerification(iter->first, high_key, keys,
+        iter->second);
+    }
+    return return_answer;
   }
 
 
