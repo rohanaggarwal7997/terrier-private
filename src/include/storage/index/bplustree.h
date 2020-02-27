@@ -1227,9 +1227,9 @@ class BPlusTree : public BPlusTreeBase {
     if (index > -1) {
       ElasticNode<ElementType> * left_sibling;
       if(index == 0) {
-        left_sibling = parent->GetLowKeyPair().second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
       } else {
-        left_sibling = (parent->GetBegin() + index - 1)->second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
       }
 
       if(left_sibling->GetSize() > node_lower_threshold) {
@@ -1242,7 +1242,8 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     if(index < parent->GetSize() - 1) {
-      ElasticNode<ElementType> * right_sibling = (parent->Begin() + index + 1)->second;
+      ElasticNode<ElementType> * right_sibling = 
+        reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
       if(right_sibling->GetSize() > node_lower_threshold) {
         // Borrow one
         child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
@@ -1258,17 +1259,18 @@ class BPlusTree : public BPlusTreeBase {
     if (index > -1) {
       ElasticNode<ElementType> * left_sibling;
       if(index == 0) {
-        left_sibling = parent->GetLowKeyPair().second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
       } else {
-        left_sibling = (parent->GetBegin() + index - 1)->second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
       }
 
-      left_sibling->Merge(child);
+      left_sibling->MergeNode(child);
       child->FreeElasticNode();
       parent->Erase(index);
     } else {
-      ElasticNode<ElementType> * right_sibling = (parent->GetBegin() + index + 1)->second;
-      child->Merge(right_sibling);
+      ElasticNode<ElementType> * right_sibling = 
+        reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+      child->MergeNode(right_sibling);
       right_sibling->FreeElasticNode();
       parent->Erase(index+1);
     }
@@ -1331,9 +1333,9 @@ class BPlusTree : public BPlusTreeBase {
         }
 
         // Check if this node is root and if its size becomes 0
-        if (current_node->GetSize() == 0) {
+        if (node->GetSize() == 0) {
           root = current_node->GetLowKeyPair().second;
-          current_node->FreeElasticNode();
+          node->FreeElasticNode();
         }
 
         return true;
