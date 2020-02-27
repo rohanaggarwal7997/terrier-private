@@ -618,6 +618,17 @@ class BPlusTree : public BPlusTreeBase {
      */
     inline ElementType *Begin() { return start; }
 
+    /*
+     * RBegin() - Returns a reverse begin iterator to its internal array
+     */
+    inline ElementType *RBegin() {
+      if (this->GetSize() == 0) {
+        return NULL;
+      } else {
+        return (end-1);
+      }
+    }
+
     inline const ElementType *Begin() const { return start; }
 
     /*
@@ -730,6 +741,20 @@ class BPlusTree : public BPlusTreeBase {
       }
       memmove(start, start + 1,
         (this->GetSize() - 1)*sizeof(ElementType));
+      SetEnd(this->GetSize() - 1);
+      return true;
+    }
+
+    /*
+    Pop Back - Pops the last element from the list
+    Returns False if empty
+    */
+    bool PopEnd() {
+      if(this->GetSize() == 0) return false;
+      if(this->GetSize() == 1) {
+        SetEnd(0);
+        return true;
+      }
       SetEnd(this->GetSize() - 1);
       return true;
     }
