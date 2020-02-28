@@ -716,7 +716,6 @@ void StructuralIntegrityTestWithCornerCase() {
     p1.first = k;
     bplustree->Insert(p1);
   }
-
   EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys.begin(), *keys.rbegin(),
     keys, bplustree->GetRoot()), true);
   // All keys found in the tree
@@ -746,21 +745,102 @@ void StructuralIntegrityTestWithCornerCase2() {
     p1.first = k;
     bplustree->Insert(p1);
   }
-  std::cout << std::endl;
 
-  for(unsigned i = 7; i<keys.size(); i++) {
-    BPlusTree<int, TupleSlot>::KeyValuePair p1;
-    p1.first = *(it);
-    it++;
-    std::cout << "Finding " << p1.first << std::endl;
-    EXPECT_EQ(bplustree->IsPresent(p1.first), true);
-  }  
-
-  // EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys.begin(), *keys.rbegin(),
-  //   keys, bplustree->GetRoot()), true);
   // All keys found in the tree
-  // EXPECT_EQ(keys.size(), 0);
+  EXPECT_EQ(keys.size(), 5);
+  bplustree->FreeTree();
+  delete bplustree;  
+}
 
+void LargeStructuralIntegrityVerificationTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  // The size is set to 2 more because of the following
+  // When we split an inner node, we might end up deleting an element
+  // from right side without putting anything in the right side
+  // Hence the size may be 31 at some points if we used 64. 
+  bplustree->SetInnerNodeSizeUpperThreshold(16);
+  bplustree->SetLeafNodeSizeUpperThreshold(16);
+  bplustree->SetInnerNodeSizeLowerThreshold(6);
+  bplustree->SetLeafNodeSizeLowerThreshold(6);
+  std::set<int> keys;
+  for(unsigned i=0; i<1000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    int k = rand()%5000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k); 
+    p1.first = k;
+    bplustree->Insert(p1);
+
+    auto keys_copy = keys;
+
+    // Structural Integrity Verification Everytime
+    EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys_copy.begin(), *keys_copy.rbegin(),
+    keys_copy, bplustree->GetRoot()), true);
+    EXPECT_EQ(keys_copy.size(), 0);
+  }
+
+  // Delete All keys except one - As root empty is not handled by delete yet
+  // TODO: To be fixed by preetansh
+  for(int i=0; i<999; i++) {
+    auto iter = keys.begin();
+    // int k = rand() % keys.size();
+    // for(int j = 0; j < k; j++) iter++;
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = *iter;
+    keys.erase(iter);
+    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    std::set<int> newkeys = keys;
+
+    // Structural Integrity Test Everytime
+    EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),
+      newkeys, bplustree->GetRoot()), true);
+    EXPECT_EQ(newkeys.size(), 0);
+  }
+
+  // Insert Again
+  for(unsigned i=0; i<1000; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    int k = rand()%5000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k); 
+    p1.first = k;
+    bplustree->Insert(p1);
+
+    auto keys_copy = keys;
+
+    // Structural Integrity Verification Everytime
+    EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys_copy.begin(), *keys_copy.rbegin(),
+    keys_copy, bplustree->GetRoot()), true);
+    EXPECT_EQ(keys_copy.size(), 0);
+  }
+
+  // Delete Again now two keys remaining
+  for(int i=0; i<999; i++) {
+    auto iter = keys.begin();
+    // int k = rand() % keys.size();
+    // for(int j = 0; j < k; j++) iter++;
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = *iter;
+    keys.erase(iter);
+    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    std::set<int> newkeys = keys;
+
+    // Structural Integrity Test Everytime
+    EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),
+      newkeys, bplustree->GetRoot()), true);
+    EXPECT_EQ(newkeys.size(), 0);
+  }
+
+  // Check Both still present
+  auto iter = keys.begin();
+  for(unsigned i =0; i<2; i++) {
+    //std::cout<<"Checking"<<*iter<<std::endl;
+    EXPECT_EQ(bplustree->IsPresent(*iter), true);
+    iter++;
+  }
+
+  // Free Everything
   bplustree->FreeTree();
   delete bplustree;  
 }
