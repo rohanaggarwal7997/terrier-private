@@ -1253,7 +1253,7 @@ class BPlusTree : public BPlusTreeBase {
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
       if(right_sibling->GetSize() > node_lower_threshold) {
 
-        // Borrow onereinterpret_cast
+        // Borrow one
         child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
 
         // Handling Boundary Case 
