@@ -463,6 +463,38 @@ void BasicBPlusTreeInsertTestNoSplittingOfRoot() {
   delete bplustree;
 }
 
+void BasicBPlusTreeDeleteTestNoSplittingOfRoot() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  for(unsigned i=0; i<100; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = i;
+    bplustree->Insert(p1);
+  }
+
+  using ElementType = BPlusTree<int, TupleSlot>::KeyValuePair;
+
+  auto node = reinterpret_cast<BPlusTree<int, TupleSlot>::ElasticNode<ElementType> *>(bplustree->GetRoot()); 
+  unsigned i = 0;
+  for (ElementType *element_p = node->Begin(); element_p != node->End(); element_p++) {
+    EXPECT_EQ(element_p->first, i);
+    i++;
+  }
+  EXPECT_EQ(i, 100);
+
+  // Delete all values
+  for(unsigned i=0; i<100; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = i;
+    bplustree->Delete(bplustree->GetRoot(), p1);
+    EXPECT_EQ(bplustree->IsPresent(i), false);
+  }
+  EXPECT_EQ(bplustree->GetRoot()==NULL, true);
+
+  node->FreeElasticNode();
+  delete bplustree;
+}
+
 void BasicBPlusTreeInsertTestSplittingOfRootOnce() {
 
   auto bplustree = new BPlusTree<int, TupleSlot>;
@@ -877,6 +909,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   StructuralIntegrityTestWithRandomInsert();
   StructuralIntegrityTestWithCornerCase();
   StructuralIntegrityTestWithCornerCase2();
+  BasicBPlusTreeDeleteTestNoSplittingOfRoot();
   LargeKeySequentialInsertAndDeleteTest();
   StructuralIntegrityTestWithRandomInsertAndDelete();
   LargeStructuralIntegrityVerificationTest();
