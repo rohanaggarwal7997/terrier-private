@@ -604,6 +604,16 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     /*
+      Print elastic node keys
+    */
+    void PrintElasticNode() {
+      for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
+        // Manually calls destructor when the node is destroyed
+        std::cout << element_p->first << " ";
+      }
+    }
+
+    /*
      IntializeEnd() - Make end = start
     */
     inline void InitializeEnd() {end = start;}
@@ -1038,6 +1048,62 @@ class BPlusTree : public BPlusTreeBase {
     }
   }
 
+  void PrintTreeNode(BaseNode* node) {
+    if(node->GetType() != NodeType::LeafType) {
+      auto node_elastic = 
+        reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+      node_elastic->PrintElasticNode();
+    } else {
+      auto node_elastic = 
+        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);  
+      node_elastic->PrintElasticNode();
+    }
+    std::cout << '\t';
+  }
+
+  /*
+    Traverses Down the root in a BFS manner and prints all the nodes
+  */
+  void PrintTree() {
+    if(root == NULL) return;
+    std::queue<BaseNode *> bfs_queue;
+    std::queue<BaseNode *> all_nodes;
+    bfs_queue.push(root);
+
+    // print root
+    std::cout << "Printing Root " << std::endl;
+    if(root->GetType() != NodeType::LeafType) {
+      auto root_elastic = 
+        reinterpret_cast<ElasticNode<KeyValuePair> *>(root);
+      root_elastic->PrintElasticNode();
+    } else {
+      auto root_elastic = 
+        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);  
+      root_elastic->PrintElasticNode();
+    }
+
+    while(!bfs_queue.empty()) {
+      BaseNode * node = bfs_queue.front();
+      bfs_queue.pop();
+      all_nodes.push(node);
+      if(node->GetType() != NodeType::LeafType) {
+        std::cout << "printing children " << std::endl;
+
+        bfs_queue.push(node->GetLowKeyPair().second);
+        PrintTreeNode(node->GetLowKeyPair().second);
+
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair * element_p = current_node->Begin();
+          element_p!=current_node->End(); element_p ++) {
+          bfs_queue.push(element_p->second);
+          PrintTreeNode(element_p->second);
+        }
+      }
+    }
+    std::cout << std::endl;
+  }
+
   /*
   StructuralIntegrityVerification - Recursively Tests the structural integrity of the data
   structure. Verifies whether all the keys in the set are present in the tree. Verifies
@@ -1248,7 +1314,7 @@ class BPlusTree : public BPlusTreeBase {
         // Borrow one
         child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
         right_sibling->PopBegin();
-        (parent->Begin() + index)->first = right_sibling->Begin()->first; 
+        (parent->Begin() + index + 1)->first = right_sibling->Begin()->first;
         return;
       }
     }
