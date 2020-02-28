@@ -5,6 +5,7 @@
 #include <stdlib.h> 
 #include <unordered_map>
 #include <set>
+#include <unordered_set>
 
 namespace terrier::storage::index {
 
@@ -493,6 +494,43 @@ void DuplicateKeyValueInsertTest() {
   delete bplustree;
 }
 
+void LargeKeyInsertUniqueAndRetrievalTest() {
+  // Insert Keys
+  auto bplustree = new BPlusTree<int, int>;
+  bplustree->SetInnerNodeSizeUpperThreshold(5);
+  bplustree->SetLeafNodeSizeUpperThreshold(5);
+  std::unordered_map<int, std::vector<int> > keys_values;
+  for(unsigned i=0; i<100000; i++) {
+    bool contained = false;
+    bool initial_contained = false;
+    int k = rand()%100;
+    int v = rand()%10;
+    if(keys_values.count(k) == 0) {
+      std::vector<int> value_list;
+      value_list.push_back(v);
+      keys_values[k] = value_list;
+      contained = true;
+    }
+    else {
+      for(int j : keys_values[k]) {
+        if(j == v) {
+          contained = true;
+          initial_contained = true;
+          break;
+        }
+      }
+    }
+    if(!contained) {
+      keys_values[k].push_back(v);
+    }
+    bool insert_status = bplustree->InsertUnique(k, v);
+    EXPECT_EQ((insert_status != initial_contained), true);
+  }
+  EXPECT_EQ(bplustree->DuplicateKeyValueUniqueInsertCheck(keys_values), true);
+  bplustree->FreeTree();
+  delete bplustree;
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
@@ -504,6 +542,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   StructuralIntegrityTestWithRandomInsert();
   LargeKeyRandomInsertSiblingSequenceTest();
   DuplicateKeyValueInsertTest();
+  LargeKeyInsertUniqueAndRetrievalTest();
 }
 
 } // namespace terrier::storage::index

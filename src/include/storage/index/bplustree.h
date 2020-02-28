@@ -7,6 +7,7 @@
 #include <set>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace terrier::storage::index {
 
@@ -1195,6 +1196,35 @@ class BPlusTree : public BPlusTreeBase {
     return true;
   }
 
+  /*
+   * The check gets a map of keys to vector of values that are whetted and
+   * removes any duplicates that might have been tried to be added by a
+   * transaction in insert unique. The check ensures that the values list
+   * in the B+ tree also have the same keys and the same order.
+   */
+  bool DuplicateKeyValueUniqueInsertCheck(std::unordered_map<KeyType, std::vector<ValueType> >& keys_values) {
+    auto itr = keys_values.begin();
+    for(;itr!=keys_values.end();itr++) {
+      KeyType k = itr->first;
+      std::vector<ValueType> values = keys_values[k];
+      std::list<ValueType> * values_list_p = FindValueOfKey(k);
+      if(values_list_p == NULL) {
+        return false;
+      }
+      auto it_list = values_list_p->begin();
+      for(unsigned j = 0; j != values.size(); j++) {
+        if (it_list == values_list_p->end()) {
+          return false;
+        }
+        if(values[j] != *(it_list)) {
+          return false;
+        }
+        it_list++;
+      }
+    }
+    return true;
+  }
+
 
 
   /*
@@ -1336,7 +1366,7 @@ class BPlusTree : public BPlusTreeBase {
     return;
   }
 
-  /*    InsertWrapper - adds element in the tree
+  /*    InsertWrapper - adds key and value in the tree
    *    Checks if the key is available in the tree and
    *    retrieves value list for the key. Appends the
    *    value in the value list or inserts a
@@ -1345,7 +1375,7 @@ class BPlusTree : public BPlusTreeBase {
   void InsertWrapper(KeyType key, ValueType value) {
     // retrieve the value list of the key from tree
     std::list<ValueType> * value_list_p = FindValueOfKey(key);
-    if(value_list_p == NULL) { // list not exists
+    if(value_list_p == NULL) { // list doesn't exist
       auto value_list = new std::list<ValueType>();
       value_list->push_back(value);
       Insert(KeyValuePair(key, value_list));
@@ -1353,6 +1383,32 @@ class BPlusTree : public BPlusTreeBase {
     else { // just push back in the existing list
       value_list_p->push_back(value);
     }
+  }
+
+  /*
+   *    InsertUnique - adds key and value in the tree only
+   *    if the particular value has not been seen for that
+   *    particular key.
+   */
+  bool InsertUnique(KeyType key, ValueType value) {
+    // retrieve the value list of the key from tree
+    std::list<ValueType> * value_list_p = FindValueOfKey(key);
+    if(value_list_p == NULL) {  // list doesn't exist, insert safely
+      auto value_list = new std::list<ValueType>();
+      value_list->push_back(value);
+      Insert(KeyValuePair(key, value_list));
+    }
+    else { // check if the list does not have it
+      // return if there is the value
+      auto itr = value_list_p->begin();
+      for(;itr!=value_list_p->end();itr++) {
+        if(ValueCmpEqual(*itr, value)) {
+          return false;
+        }
+      }
+      value_list_p->push_back(value);
+    }
+    return true;
   }
 
   BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
