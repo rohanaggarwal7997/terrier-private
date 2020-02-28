@@ -911,9 +911,9 @@ TEST_F(BPlusTreeTests, InsertTests) {
   StructuralIntegrityTestWithCornerCase2();
   BasicBPlusTreeDeleteTestNoSplittingOfRoot();
   LargeKeySequentialInsertAndDeleteTest();
-  // LargeKeyRandomInsertAndDeleteTest();
+  LargeKeyRandomInsertAndDeleteTest();
   StructuralIntegrityTestWithRandomInsertAndDelete();
-  // LargeStructuralIntegrityVerificationTest();
+  LargeStructuralIntegrityVerificationTest();
 }
 
 } // namespace terrier::storage::index

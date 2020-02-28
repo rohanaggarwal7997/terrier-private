@@ -1252,14 +1252,14 @@ class BPlusTree : public BPlusTreeBase {
                      a    b    c   d   e                           a   b   c  d   e
 
           Initially
-         C - parent-key
+         C - (parent->Begin() + index)-key
          A - left sibling->Rbegin()->first
          D - child->Begin()->first
          d - child->lowkeypair().second
          c - left sibling->Rbegin()->second
 
           Finally
-         A - parent-key
+         A - (parent->Begin() + index)-key
          C - child->Begin()->first
          c - child->lowkeypair().second
          d - child->Begin()->second
@@ -1268,11 +1268,10 @@ class BPlusTree : public BPlusTreeBase {
 
         // Borrow one
 
-        if(child->GetType() == NodeType::Leaf) {
+        if(child->GetType() == NodeType::LeafType) {
           (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
           child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
           left_sibling->PopEnd();
-          return;
         } else {
           auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
           auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
@@ -1281,7 +1280,7 @@ class BPlusTree : public BPlusTreeBase {
           */
           /*C*/auto parent_key = (parent->Begin() + index)->first;
           /*d*/auto current_low_pointer = inner_child->Begin()->second; 
-          auto KeyNodePointerPair to_insert;
+          KeyNodePointerPair to_insert;
           to_insert.first = parent_key;
           to_insert.second = current_low_pointer;
           inner_child->InsertElementIfPossible(to_insert, inner_child->Begin());
@@ -1293,13 +1292,14 @@ class BPlusTree : public BPlusTreeBase {
           /*
             Update parent key to A
           */
-          (parent->Begin() + index)->second = inner_left_sibling->RBegin()->first;
+          (parent->Begin() + index)->first = inner_left_sibling->RBegin()->first;
 
           /*
             Delete A->c
           */
           left_sibling->PopEnd();
         }
+        return;
       }
     }
 
@@ -1308,18 +1308,67 @@ class BPlusTree : public BPlusTreeBase {
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
       if(right_sibling->GetSize() > node_lower_threshold) {
 
-        // Borrow one
-        child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
 
-        // Handling Boundary Case 
+        /*
+        This is for Inner Node only
+        Remember for leaf node - You cannot bring down A.
+        Capital chars represent Keys. Small chars represent nodes.                    
+                        X   A                                          X    C
+                          \   \                                          /     \
+                       [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                        /  \      /  \  \                             /  \  \   /  \
+                       a    b    c   d   e                           a   b   c  d   e
+
+            Initially
+           X - (parent->Begin() + index)-key
+           A - (parent->Begin() + index + 1)-key
+           C - right_sibling->Begin()->first
+           c - right_sibling->lowkeypair().second
+           d - right_sibling->Begin()->second
+           D - (right_sibling->Begin() + 1)->first - Happens automatically
+
+            Finally
+           X - (parent->Begin() + index)-key
+           C - (parent->Begin() + index + 1)-key
+           A - child->Rbegin()->first
+           D - right_sibling->Begin()->first
+           d - right_sibling->lowkeypair().second
+           c - child->Rbegin()->second
+        */
+
+        // Borrow one
+
         if(child->GetType() == NodeType::InnerType) {
           auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
-          auto low_pointer_initial = inner_child->RBegin()->second;
-          inner_child->RBegin()->second = inner_child->GetLowKeyPair().second;
-          right_sibling->GetElasticLowKeyPair()->second = low_pointer_initial;             
+          auto inner_right_sibling = reinterpret_cast<InnerNode *> (right_sibling);
+          /* 
+            Make A->c to insert in child
+          */
+          /*A*/auto parent_key = (parent->Begin() + index + 1)->first;
+          /*c*/auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second; 
+          KeyNodePointerPair to_insert;
+          to_insert.first = parent_key;
+          to_insert.second = current_low_pointer;
+          inner_child->InsertElementIfPossible(to_insert, inner_child->End());
+          /*
+            Make low key pointer d
+          */
+          inner_child->GetElasticLowKeyPair()->second = inner_right_sibling->Begin()->second;
+
+          /*
+            Update A to C
+          */
+          (parent->Begin() + index + 1)->first = inner_right_sibling->Begin()->first;
+
+          /*
+            Delete C-d
+          */
+          right_sibling->PopBegin();             
+        } else {
+          child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
+          right_sibling->PopBegin();
+          (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
         }
-        right_sibling->PopBegin();
-        (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
         return;
       }
     }
@@ -1335,12 +1384,35 @@ class BPlusTree : public BPlusTreeBase {
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
       }
 
+      if(left_sibling->GetType() == NodeType::InnerType) {
+        auto parent_key = (parent->Begin() + index)->first;
+        auto current_low_pointer = child->GetLowKeyPair().second;
+        auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
+
+        KeyNodePointerPair to_insert;
+        to_insert.first = parent_key;
+        to_insert.second = current_low_pointer;
+        inner_left_sibling->InsertElementIfPossible(to_insert, inner_left_sibling->End());
+      }
+
       left_sibling->MergeNode(child);
       child->FreeElasticNode();
       parent->Erase(index);
     } else {
       ElasticNode<ElementType> * right_sibling = 
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+
+      if(right_sibling->GetType() == NodeType::InnerType) {
+        auto parent_key = (parent->Begin() + index + 1)->first;
+        auto current_low_pointer = right_sibling->GetLowKeyPair().second;
+        auto inner_child = reinterpret_cast<InnerNode *> (child);
+
+        KeyNodePointerPair to_insert;
+        to_insert.first = parent_key;
+        to_insert.second = current_low_pointer;
+        inner_child->InsertElementIfPossible(to_insert, inner_child->End());
+      }
+
       child->MergeNode(right_sibling);
       right_sibling->FreeElasticNode();
       parent->Erase(index+1);
@@ -1366,7 +1438,11 @@ class BPlusTree : public BPlusTreeBase {
     // Else, call delete on child and check if child becomes underfull
     if (current_node->GetType() == NodeType:: LeafType) {
       // Leaf Node case => delete element
-      auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+      auto node 
+
+
+
+      = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
       auto leaf_position = node->FindLocation(element.first, this);
       if (leaf_position != node->Begin()) {
         leaf_position -= 1;
