@@ -1221,7 +1221,10 @@ class BPlusTree : public BPlusTreeBase {
 
   template<typename ElementType> 
   void DeleteRebalance(ElasticNode<KeyNodePointerPair> * parent, 
-    ElasticNode<ElementType> * child, int index, int node_lower_threshold) {
+    BaseNode * input_child_pointer, int index, int node_lower_threshold) {
+
+    auto child = reinterpret_cast<ElasticNode<ElementType> *>(input_child_pointer);
+
     if (child->GetSize() >= node_lower_threshold) {
       return;
     } 
@@ -1236,6 +1239,7 @@ class BPlusTree : public BPlusTreeBase {
       }
 
       if(left_sibling->GetSize() > node_lower_threshold) {
+
         // Borrow one
         (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
         child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
@@ -1248,8 +1252,17 @@ class BPlusTree : public BPlusTreeBase {
       ElasticNode<ElementType> * right_sibling = 
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
       if(right_sibling->GetSize() > node_lower_threshold) {
-        // Borrow one
+
+        // Borrow onereinterpret_cast
         child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
+
+        // Handling Boundary Case 
+        if(child->GetType() == NodeType::InnerType) {
+          auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
+          auto low_pointer_initial = inner_child->RBegin()->second;
+          inner_child->RBegin()->second = inner_child->GetLowKeyPair().second;
+          right_sibling->GetElasticLowKeyPair()->second = low_pointer_initial;             
+        }
         right_sibling->PopBegin();
         (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
         return;
@@ -1328,10 +1341,10 @@ class BPlusTree : public BPlusTreeBase {
       // Now perform any rebalancing or merge on child if it becomes underfull
       if (is_deleted) {
         if (child_pointer->GetType() == NodeType:: LeafType) {
-          DeleteRebalance<KeyValuePair>(node, reinterpret_cast<ElasticNode<KeyValuePair> *>(child_pointer), 
+          DeleteRebalance<KeyValuePair>(node, child_pointer, 
             index, GetLeafNodeSizeLowerThreshold());
         } else {
-          DeleteRebalance<KeyNodePointerPair>(node, reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(child_pointer), 
+          DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
             index, GetInnerNodeSizeLowerThreshold());
         }
 
