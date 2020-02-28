@@ -1438,11 +1438,7 @@ class BPlusTree : public BPlusTreeBase {
     // Else, call delete on child and check if child becomes underfull
     if (current_node->GetType() == NodeType:: LeafType) {
       // Leaf Node case => delete element
-      auto node 
-
-
-
-      = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+      auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
       auto leaf_position = node->FindLocation(element.first, this);
       if (leaf_position != node->Begin()) {
         leaf_position -= 1;
