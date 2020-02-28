@@ -766,6 +766,8 @@ class BPlusTree : public BPlusTreeBase {
     Returns False if empty
     */
     bool Erase(int i) {
+      if(i < 0 || i >= this->GetSize()) std::cout<<"Found Error"<<std::endl;
+
       if(this->GetSize() <= i) return false;
       
       if(this->GetSize() == 1) {
@@ -1059,6 +1061,7 @@ class BPlusTree : public BPlusTreeBase {
           return false;
         }
         /* Size of Node is correct */
+        if(current_node != root)
         if(node->GetSize() < leaf_node_size_lower_threshold_ ||
           node->GetSize() > leaf_node_size_upper_threshold_) {
           return false;
@@ -1068,6 +1071,7 @@ class BPlusTree : public BPlusTreeBase {
     } else {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       /* Size of Node is correct */
+      if(current_node != root)
       if(node->GetSize() < inner_node_size_lower_threshold_ || 
         node->GetSize() > inner_node_size_upper_threshold_) {
         return false;
@@ -1248,7 +1252,7 @@ class BPlusTree : public BPlusTreeBase {
         // Borrow one
         child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
         right_sibling->PopBegin();
-        (parent->Begin() + index)->first = right_sibling->Begin()->first; 
+        (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
         return;
       }
     }
