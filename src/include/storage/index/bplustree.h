@@ -1240,11 +1240,66 @@ class BPlusTree : public BPlusTreeBase {
 
       if(left_sibling->GetSize() > node_lower_threshold) {
 
+
+      /*
+      This is for Inner Node only
+      Remember for leaf node - You cannot bring down A.
+      Capital chars represent Keys. Small chars represent nodes.                    
+                          A                                               C
+                        /   \                                          /     \
+                     [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                      /  \      /  \  \                             /  \  \   /  \
+                     a    b    c   d   e                           a   b   c  d   e
+
+          Initially
+         C - parent-key
+         A - left sibling->Rbegin()->first
+         D - child->Begin()->first
+         d - child->lowkeypair().second
+         c - left sibling->Rbegin()->second
+
+          Finally
+         A - parent-key
+         C - child->Begin()->first
+         c - child->lowkeypair().second
+         d - child->Begin()->second
+         D - (child->Begin() + 1)->first - Happens automatically
+      */
+
         // Borrow one
-        (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
-        child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
-        left_sibling->PopEnd();
-        return;
+
+        if(child->GetType() == NodeType::Leaf) {
+          (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
+          child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
+          left_sibling->PopEnd();
+          return;
+        } else {
+          auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
+          auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
+          /* 
+            Make C->d to insert in child
+          */
+          /*C*/auto parent_key = (parent->Begin() + index)->first;
+          /*d*/auto current_low_pointer = inner_child->Begin()->second; 
+          auto KeyNodePointerPair to_insert;
+          to_insert.first = parent_key;
+          to_insert.second = current_low_pointer;
+          inner_child->InsertElementIfPossible(to_insert, inner_child->Begin());
+          /*
+            Make low key pointer c
+          */
+          inner_child->GetElasticLowKeyPair()->second = inner_left_sibling->RBegin()->second;
+
+          /*
+            Update parent key to A
+          */
+          (parent->Begin() + index)->second = inner_left_sibling->RBegin()->first;
+
+          /*
+            Delete A->c
+          */
+          left_sibling->PopEnd();
+        }
       }
     }
 
