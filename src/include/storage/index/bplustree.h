@@ -1319,6 +1319,7 @@ class BPlusTree : public BPlusTreeBase {
           bool is_deleted = node->Erase(leaf_position - node->Begin());
           if (is_deleted && node->GetSize() == 0) {
             // all elements of tree are now deleted
+            node->FreeElasticNode(); /*Important - we need to free node*/
             root = NULL;
           }
           return is_deleted;
