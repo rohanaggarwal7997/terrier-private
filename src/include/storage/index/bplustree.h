@@ -766,7 +766,6 @@ class BPlusTree : public BPlusTreeBase {
     Returns False if empty
     */
     bool Erase(int i) {
-      if(i < 0 || i >= this->GetSize()) std::cout<<"Found Error"<<std::endl;
 
       if(this->GetSize() <= i) return false;
       
