@@ -1384,6 +1384,15 @@ class BPlusTree : public BPlusTreeBase {
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
       }
 
+      /*
+                           A                                         
+                         /   \                                      B  A  C  D
+                        B    [C  D]              ==                /  \  \  \  \
+                       / \   /  \  \                              a    b  c  d  e
+                      a   b  c   d  e
+      */
+
+
       if(left_sibling->GetType() == NodeType::InnerType) {
         auto parent_key = (parent->Begin() + index)->first;
         auto current_low_pointer = child->GetLowKeyPair().second;
