@@ -898,6 +898,62 @@ void LargeStructuralIntegrityVerificationTest() {
   delete bplustree;  
 }
 
+void StructuralIntegrityTestWithRandomInsertAndDelete2() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  // The size is set to 2 more because of the following
+  // When we split an inner node, we might end up deleting an element
+  // from right side without putting anything in the right side
+  // Hence the size may be 31 at some points if we used 64. 
+  bplustree->SetInnerNodeSizeUpperThreshold(6);
+  bplustree->SetLeafNodeSizeUpperThreshold(6);
+  bplustree->SetInnerNodeSizeLowerThreshold(2);
+  bplustree->SetLeafNodeSizeLowerThreshold(2);
+  std::set<int> keys;
+
+  std::cout << "Inserting " << std::endl;
+  for(unsigned i=0; i<37; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    int k = rand()%60;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k); 
+    p1.first = k;
+    bplustree->Insert(p1);
+  }
+
+  // bplustree->PrintTree();
+
+  std::cout << "Deleting " << std::endl;
+  auto it = keys.begin();
+  for(unsigned i = 0; i<keys.size()/2; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = *(it);
+    it++;
+    // keys.erase(keys.begin());
+    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    std::cout << "-----------------Deleted " << p1.first << std::endl;
+    // bplustree->PrintTree();        
+  }
+
+  // bplustree->PrintTree();
+
+  for(unsigned i = keys.size()/2; i<keys.size(); i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = *(it);
+    it++;
+    std::cout << "Finding " << p1.first << std::endl;
+    EXPECT_EQ(bplustree->IsPresent(p1.first), true);
+  }  
+
+  // EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys.begin(), *keys.rbegin(),
+  //   keys, bplustree->GetRoot()), true);
+  // All keys found in the tree
+  // EXPECT_EQ(keys.size(), 0);
+
+  bplustree->FreeTree();
+  delete bplustree;  
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
@@ -913,6 +969,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   LargeKeySequentialInsertAndDeleteTest();
   LargeKeyRandomInsertAndDeleteTest();
   StructuralIntegrityTestWithRandomInsertAndDelete();
+  StructuralIntegrityTestWithRandomInsertAndDelete2();
   LargeStructuralIntegrityVerificationTest();
 }
 
