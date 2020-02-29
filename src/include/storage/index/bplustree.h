@@ -681,6 +681,7 @@ class BPlusTree : public BPlusTreeBase {
     }
 
    public:
+
     /*
     insertElementIfPossible - Returns true if inserted and false if node full
     Inserts at location provided.
@@ -1279,7 +1280,7 @@ class BPlusTree : public BPlusTreeBase {
             Make C->d to insert in child
           */
           /*C*/auto parent_key = (parent->Begin() + index)->first;
-          /*d*/auto current_low_pointer = inner_child->Begin()->second; 
+          /*d*/auto current_low_pointer = inner_child->GetLowKeyPair().second; 
           KeyNodePointerPair to_insert;
           to_insert.first = parent_key;
           to_insert.second = current_low_pointer;
@@ -1339,13 +1340,15 @@ class BPlusTree : public BPlusTreeBase {
         // Borrow one
 
         if(child->GetType() == NodeType::InnerType) {
+          // std::cout<<"I am here"<<std::endl;
           auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
           auto inner_right_sibling = reinterpret_cast<InnerNode *> (right_sibling);
           /* 
             Make A->c to insert in child
           */
           /*A*/auto parent_key = (parent->Begin() + index + 1)->first;
-          /*c*/auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second; 
+          /*c*/auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second;
+          // std::cout<<parent_key<<std::endl; 
           KeyNodePointerPair to_insert;
           to_insert.first = parent_key;
           to_insert.second = current_low_pointer;
@@ -1353,7 +1356,7 @@ class BPlusTree : public BPlusTreeBase {
           /*
             Make low key pointer d
           */
-          inner_child->GetElasticLowKeyPair()->second = inner_right_sibling->Begin()->second;
+          right_sibling->GetElasticLowKeyPair()->second = inner_right_sibling->Begin()->second;
 
           /*
             Update A to C
