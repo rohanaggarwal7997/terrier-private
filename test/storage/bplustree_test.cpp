@@ -258,13 +258,13 @@ void PopBeginTest() {
   using ElementType = BPlusTree<int, TupleSlot>::KeyNodePointerPair;
   unsigned i = 0;
   while(node->PopBegin()) {
-  	i++;
-  	unsigned j = i;
-	for (ElementType *element_p = node->Begin(); element_p != node->End(); element_p++) {
-	  EXPECT_EQ(element_p->first, j);
-	  j++;
-	}
-	EXPECT_EQ(j, 10);
+    i++;
+    unsigned j = i;
+  for (ElementType *element_p = node->Begin(); element_p != node->End(); element_p++) {
+    EXPECT_EQ(element_p->first, j);
+    j++;
+  }
+  EXPECT_EQ(j, 10);
   }
 
   EXPECT_EQ(i, 10);
@@ -528,7 +528,7 @@ void BasicBPlusTreeInsertTestSplittingOfRootOnce() {
   // Count no of elements in root node - should be 1
   i = 0;
   for (KeyPointerType * element_p = noderoot->Begin(); element_p!=noderoot->End(); element_p ++)
-  	i++;
+    i++;
 
   EXPECT_EQ(i, 1);
 
@@ -549,11 +549,11 @@ void LargeKeySequentialInsertAndRetrievalTest() {
   }
 
   for(int i=0; i<100000; i++) {
-  	EXPECT_EQ(bplustree->IsPresent(i), true);
+    EXPECT_EQ(bplustree->IsPresent(i), true);
   }
 
   for(int i = 100000; i < 200000; i++) {
-  	EXPECT_EQ(bplustree->IsPresent(i), false);
+    EXPECT_EQ(bplustree->IsPresent(i), false);
   }
 
   bplustree->FreeTree();
@@ -1103,6 +1103,75 @@ void StructuralIntegrityTestWithRandomInsertAndDelete2Reverse() {
   delete bplustree;  
 }
 
+void BPlusTreeCompleteDeleteAndReinsertTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  // The size is set to 2 more because of the following
+  // When we split an inner node, we might end up deleting an element
+  // from right side without putting anything in the right side
+  // Hence the size may be 31 at some points if we used 64. 
+  bplustree->SetInnerNodeSizeUpperThreshold(8);
+  bplustree->SetLeafNodeSizeUpperThreshold(8);
+  bplustree->SetInnerNodeSizeLowerThreshold(3);
+  bplustree->SetLeafNodeSizeLowerThreshold(3);
+  std::set<int> keys;
+  for(unsigned i=0; i<30; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    keys.insert(i); 
+    p1.first = i;
+    bplustree->Insert(p1);
+  }
+
+  for(unsigned i = 0; i<30; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = *keys.begin();
+    keys.erase(keys.begin());
+    bplustree->Delete(bplustree->GetRoot(), p1);
+    std::set<int> newkeys = keys;
+    if(bplustree->GetRoot() != NULL) {
+      EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),
+        newkeys, bplustree->GetRoot()), true);
+    } else {
+      EXPECT_EQ(bplustree->GetRoot() == NULL, true);
+    }
+  }
+
+  for(unsigned i=0; i<30; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    keys.insert(i); 
+    p1.first = i;
+    bplustree->Insert(p1);
+
+    std::set<int> newkeys = keys;
+    if(bplustree->GetRoot() != NULL) {
+      EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),
+        newkeys, bplustree->GetRoot()), true);
+    } else {
+      EXPECT_EQ(bplustree->GetRoot() == NULL, true);
+    }
+  }
+
+  for(unsigned i = 0; i<30; i++) {
+    BPlusTree<int, TupleSlot>::KeyValuePair p1;
+    p1.first = *keys.begin();
+    keys.erase(keys.begin());
+    bplustree->Delete(bplustree->GetRoot(), p1);
+    std::set<int> newkeys = keys;
+    if(bplustree->GetRoot() != NULL) {
+      EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),
+        newkeys, bplustree->GetRoot()), true);
+    } else {
+      EXPECT_EQ(bplustree->GetRoot() == NULL, true);
+    }
+  }
+
+  // All keys found in the tree
+  EXPECT_EQ(keys.size(), 0);
+
+  bplustree->FreeTree();
+  delete bplustree;  
+}
+
 
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
@@ -1122,6 +1191,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   LargeStructuralIntegrityVerificationTest();
   StructuralIntegrityTestWithRandomInsertAndDelete2Reverse();
   LargeStructuralIntegrityVerificationTestReverse();
+  BPlusTreeCompleteDeleteAndReinsertTest();
 }
 
 } // namespace terrier::storage::index
