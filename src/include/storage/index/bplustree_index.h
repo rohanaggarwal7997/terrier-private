@@ -50,8 +50,8 @@ class BPlusTreeIndex final : public Index {
                    "This Insert is designed for secondary indexes with no uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    // FIXME(15-721 project2): perform a non-unique unconditional insert into the underlying data structure of the
-    // key/value pair
+    
+    bplustree_->Insert(bplustree_->GetElement(index_key, location));
     const bool UNUSED_ATTRIBUTE result = true;
 
     TERRIER_ASSERT(

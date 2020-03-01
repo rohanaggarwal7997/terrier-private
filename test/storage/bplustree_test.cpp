@@ -529,6 +529,40 @@ void ScanKeyTest() {
   delete bplustree;
 }
 
+
+void LargeStructuralIntegrityVerificationTest() {
+
+  auto bplustree = new BPlusTree<int, TupleSlot>;
+  // The size is set to 2 more because of the following
+  // When we split an inner node, we might end up deleting an element
+  // from right side without putting anything in the right side
+  // Hence the size may be 31 at some points if we used 64. 
+  bplustree->SetInnerNodeSizeUpperThreshold(16);
+  bplustree->SetLeafNodeSizeUpperThreshold(16);
+  bplustree->SetInnerNodeSizeLowerThreshold(6);
+  bplustree->SetLeafNodeSizeLowerThreshold(6);
+  std::set<int> keys;
+  for(unsigned i=0; i<1000; i++) {
+    BPlusTree<int, TupleSlot>::KeyElementPair p1;
+    int k = rand()%5000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k); 
+    p1.first = k;
+    bplustree->Insert(p1);
+
+    auto keys_copy = keys;
+
+    // Structural Integrity Verification Everytime
+    EXPECT_EQ(bplustree->StructuralIntegrityVerification(*keys_copy.begin(), *keys_copy.rbegin(),
+    keys_copy, bplustree->GetRoot()), true);
+    EXPECT_EQ(keys_copy.size(), 0);
+  }
+
+  // Free Everything
+  bplustree->FreeTree();
+  delete bplustree;  
+}
+
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
 
@@ -540,6 +574,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   LargeKeyRandomInsertSiblingSequenceTest();
   DuplicateKeyValueInsertTest();
   ScanKeyTest();
+  LargeStructuralIntegrityVerificationTest();
   // LargeKeyInsertUniqueAndRetrievalTest();
 }
 

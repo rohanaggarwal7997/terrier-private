@@ -901,6 +901,16 @@ class BPlusTree : public BPlusTreeBase {
   */
   inline BaseNode * GetRoot() {return root;}
 
+  /*
+    Get Element
+  */
+  inline KeyElementPair GetElement(KeyType key, ValueType value) {
+    KeyElementPair p1;
+    p1.first = key;
+    p1.second = value;
+    return p1;
+  }
+
 
   /*
     Tries to find key by Traversing down the BplusTree
@@ -1280,10 +1290,14 @@ class BPlusTree : public BPlusTreeBase {
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
 
     auto location_greater_key_leaf = node->FindLocation(element.first, this);
-    if (location_greater_key_leaf != node->Begin() && (location_greater_key_leaf - 1)->first == element.first) {
-      (location_greater_key_leaf - 1)->second->push_back(element.second);
-      finished_insertion = true;
-    } else {
+    if (location_greater_key_leaf != node->Begin()) {
+      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+        (location_greater_key_leaf - 1)->second->push_back(element.second);
+        finished_insertion = true;
+      }  
+    } 
+    if(finished_insertion == false)
+    {
       auto value_list = new std::list<ValueType>();
       value_list->push_back(element.second);
       KeyValuePair key_list_value;
@@ -1302,7 +1316,7 @@ class BPlusTree : public BPlusTreeBase {
         auto splitted_node = node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
         // To decide which leaf to put in the element
-        if (splitted_node_begin->first > element.first) {
+        if (KeyCmpGreater(splitted_node_begin->first, element.first)) {
           node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this));
         } else {
           splitted_node->InsertElementIfPossible(key_list_value, splitted_node->FindLocation(element.first, this));
@@ -1343,7 +1357,7 @@ class BPlusTree : public BPlusTreeBase {
         Have to add code to set it properly*/
         auto splitted_node = inner_node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
-        if(splitted_node_begin->first > inner_node_element.first) {
+        if(KeyCmpGreater(splitted_node_begin->first, inner_node_element.first)) {
           inner_node->InsertElementIfPossible(inner_node_element,
             inner_node->FindLocation(inner_node_element.first, this));
         } else {
@@ -1427,6 +1441,15 @@ class BPlusTree : public BPlusTreeBase {
         key_value_pair_cmp_obj{this},
         key_value_pair_eq_obj{this},
         root(NULL) {}
+
+
+  /*
+   * Destructor - Destroy BplusTree instance
+   *
+   */
+  ~BPlusTree() {
+    // FreeTree();
+  }
 };  // class BPlusTree
 
 }  // namespace terrier::storage::index
