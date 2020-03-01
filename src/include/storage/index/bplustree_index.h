@@ -141,11 +141,11 @@ class BPlusTreeIndex final : public Index {
 
     // Perform lookup in BPlusTree
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+    bplustree_->FindValueOfKey(index_key, results);
 
     // Avoid resizing our value_list, even if it means over-provisioning
     value_list->reserve(results.size());
 
-    bplustree_->FindValueOfKey(index_key, *value_list);
 
     // Perform visibility check on result
     for (const auto &result : results) {
