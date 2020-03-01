@@ -494,39 +494,74 @@ void DuplicateKeyValueInsertTest() {
   delete bplustree;
 }
 
-void LargeKeyInsertUniqueAndRetrievalTest() {
+//void LargeKeyInsertUniqueAndRetrievalTest() {
+//  // Insert Keys
+//  auto bplustree = new BPlusTree<int, int>;
+//  bplustree->SetInnerNodeSizeUpperThreshold(5);
+//  bplustree->SetLeafNodeSizeUpperThreshold(5);
+//  std::unordered_map<int, std::vector<int> > keys_values;
+//  for(unsigned i=0; i<100000; i++) {
+//    bool contained = false;
+//    bool initial_contained = false;
+//    int k = rand()%100;
+//    int v = rand()%10;
+//    if(keys_values.count(k) == 0) {
+//      std::vector<int> value_list;
+//      value_list.push_back(v);
+//      keys_values[k] = value_list;
+//      contained = true;
+//    }
+//    else {
+//      for(int j : keys_values[k]) {
+//        if(j == v) {
+//          contained = true;
+//          initial_contained = true;
+//          break;
+//        }
+//      }
+//    }
+//    if(!contained) {
+//      keys_values[k].push_back(v);
+//    }
+//    bool insert_status = bplustree->InsertUnique(k, v);
+//    EXPECT_EQ((insert_status != initial_contained), true);
+//  }
+//  EXPECT_EQ(bplustree->DuplicateKeyValueUniqueInsertCheck(keys_values), true);
+//  bplustree->FreeTree();
+//  delete bplustree;
+//}
+
+void ScanKeyTest() {
+
   // Insert Keys
   auto bplustree = new BPlusTree<int, int>;
   bplustree->SetInnerNodeSizeUpperThreshold(5);
   bplustree->SetLeafNodeSizeUpperThreshold(5);
   std::unordered_map<int, std::vector<int> > keys_values;
   for(unsigned i=0; i<100000; i++) {
-    bool contained = false;
-    bool initial_contained = false;
-    int k = rand()%100;
-    int v = rand()%10;
+    int k = rand()%1000;
+    int v = rand()%500000;
     if(keys_values.count(k) == 0) {
       std::vector<int> value_list;
       value_list.push_back(v);
       keys_values[k] = value_list;
-      contained = true;
     }
     else {
-      for(int j : keys_values[k]) {
-        if(j == v) {
-          contained = true;
-          initial_contained = true;
-          break;
-        }
-      }
-    }
-    if(!contained) {
       keys_values[k].push_back(v);
     }
-    bool insert_status = bplustree->InsertUnique(k, v);
-    EXPECT_EQ((insert_status != initial_contained), true);
+    bplustree->Insert(BPlusTree<int, int>::KeyElementPair(k, v));
   }
-  EXPECT_EQ(bplustree->DuplicateKeyValueUniqueInsertCheck(keys_values), true);
+  auto itr_map = keys_values.begin();
+  while(itr_map != keys_values.end()) {
+    int k = itr_map->first;
+    std::vector<int> values = keys_values[k];
+    std::vector<int> result;
+    FindValueOfKey(k, result);
+    for(int i = 0; i < values.size(); i++) {
+      EXPECT_EQ(values[i] == result[i], true);
+    }
+    itr_map++;
+  }
   bplustree->FreeTree();
   delete bplustree;
 }
@@ -542,7 +577,8 @@ TEST_F(BPlusTreeTests, InsertTests) {
   StructuralIntegrityTestWithRandomInsert();
   LargeKeyRandomInsertSiblingSequenceTest();
   DuplicateKeyValueInsertTest();
-  LargeKeyInsertUniqueAndRetrievalTest();
+//  LargeKeyInsertUniqueAndRetrievalTest();
+  ScanKeyTest();
 }
 
 } // namespace terrier::storage::index

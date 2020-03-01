@@ -942,12 +942,12 @@ class BPlusTree : public BPlusTreeBase {
 
   /*
     Tries to find key by Traversing down the BplusTree
-    Returns the list of values of the key from lead if found
+    Returns the list of values of the key from leaf if found
     Returns null if not found
   */
-  std::list<ValueType>* FindValueOfKey(KeyType key) {
+  void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
     if(root == NULL) {
-      return NULL;
+      return;
     }
 
     BaseNode * current_node = root;
@@ -971,11 +971,14 @@ class BPlusTree : public BPlusTreeBase {
     for (KeyValuePair * element_p = node->Begin();
          element_p!=node->End(); element_p ++) {
       if(element_p->first == key) {
-        return element_p->second;
+        auto itr_list = element_p->second->begin();
+        while(itr_list != element_p->second->end()) {
+          result.push_back(*itr_list);
+          itr_list++;
+        }
+        return;
       }
     }
-
-    return NULL;
   }
 
   /*
@@ -1381,26 +1384,26 @@ class BPlusTree : public BPlusTreeBase {
    *    if the particular value has not been seen for that
    *    particular key.
    */
-  bool InsertUnique(KeyType key, ValueType value) {
-    // retrieve the value list of the key from tree
-    std::list<ValueType> * value_list_p = FindValueOfKey(key);
-    if(value_list_p == NULL) {  // list doesn't exist, insert safely
-      auto value_list = new std::list<ValueType>();
-      value_list->push_back(value);
-      Insert(KeyValuePair(key, value_list));
-    }
-    else { // check if the list does not have it
-      // return if there is the value
-      auto itr = value_list_p->begin();
-      for(;itr!=value_list_p->end();itr++) {
-        if(ValueCmpEqual(*itr, value)) {
-          return false;
-        }
-      }
-      value_list_p->push_back(value);
-    }
-    return true;
-  }
+//  bool InsertUnique(KeyType key, ValueType value) {
+//    // retrieve the value list of the key from tree
+//    std::list<ValueType> * value_list_p = FindValueOfKey(key);
+//    if(value_list_p == NULL) {  // list doesn't exist, insert safely
+//      auto value_list = new std::list<ValueType>();
+//      value_list->push_back(value);
+//      Insert(KeyValuePair(key, value_list));
+//    }
+//    else { // check if the list does not have it
+//      // return if there is the value
+//      auto itr = value_list_p->begin();
+//      for(;itr!=value_list_p->end();itr++) {
+//        if(ValueCmpEqual(*itr, value)) {
+//          return false;
+//        }
+//      }
+//      value_list_p->push_back(value);
+//    }
+//    return true;
+//  }
 
   BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
          KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
