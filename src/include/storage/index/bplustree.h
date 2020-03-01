@@ -9,6 +9,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "common/spin_latch.h"
+
+
 namespace terrier::storage::index {
 
 // This is the value we use in epoch manager to make sure
@@ -673,6 +676,16 @@ class BPlusTree : public BPlusTreeBase {
     }
 
    public:
+
+     /*
+      Print elastic node keys
+    */
+    void PrintElasticNode() {
+      for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
+        // Manually calls destructor when the node is destroyed
+        std::cout << element_p->first << " ";
+      }
+    }
     /*
     insertElementIfPossible - Returns true if inserted and false if node full
     Inserts at location provided.
@@ -893,6 +906,7 @@ class BPlusTree : public BPlusTreeBase {
 
   private:
   BaseNode * root;
+  mutable common::SpinLatch root_latch;
 
   public:
 
@@ -956,6 +970,9 @@ class BPlusTree : public BPlusTreeBase {
     Returns null if not found
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
+
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
     if(root == NULL) {
       return;
     }
@@ -980,7 +997,7 @@ class BPlusTree : public BPlusTreeBase {
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
     for (KeyValuePair * element_p = node->Begin();
          element_p!=node->End(); element_p ++) {
-      if(element_p->first == key) {
+      if(KeyCmpEqual(element_p->first,key)) {
         auto itr_list = element_p->second->begin();
         while(itr_list != element_p->second->end()) {
           result.push_back(*itr_list);
@@ -989,6 +1006,62 @@ class BPlusTree : public BPlusTreeBase {
         return;
       }
     }
+  }
+
+  void PrintTreeNode(BaseNode* node) {
+    if(node->GetType() != NodeType::LeafType) {
+      auto node_elastic = 
+        reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+      node_elastic->PrintElasticNode();
+    } else {
+      auto node_elastic = 
+        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);  
+      node_elastic->PrintElasticNode();
+    }
+    std::cout << '\t';
+  }
+
+  /*
+    Traverses Down the root in a BFS manner and prints all the nodes
+  */
+  void PrintTree() {
+    if(root == NULL) return;
+    std::queue<BaseNode *> bfs_queue;
+    std::queue<BaseNode *> all_nodes;
+    bfs_queue.push(root);
+
+    // print root
+    std::cout << "Printing Root " << std::endl;
+    if(root->GetType() != NodeType::LeafType) {
+      auto root_elastic = 
+        reinterpret_cast<ElasticNode<KeyValuePair> *>(root);
+      root_elastic->PrintElasticNode();
+    } else {
+      auto root_elastic = 
+        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);  
+      root_elastic->PrintElasticNode();
+    }
+
+    while(!bfs_queue.empty()) {
+      BaseNode * node = bfs_queue.front();
+      bfs_queue.pop();
+      all_nodes.push(node);
+      if(node->GetType() != NodeType::LeafType) {
+        std::cout << "printing children " << std::endl;
+
+        bfs_queue.push(node->GetLowKeyPair().second);
+        PrintTreeNode(node->GetLowKeyPair().second);
+
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair * element_p = current_node->Begin();
+          element_p!=current_node->End(); element_p ++) {
+          bfs_queue.push(element_p->second);
+          PrintTreeNode(element_p->second);
+        }
+      }
+    }
+    std::cout << std::endl;
   }
 
   /*
@@ -1058,6 +1131,7 @@ class BPlusTree : public BPlusTreeBase {
           return false;
         }
         /* Size of Node is correct */
+        if(current_node != root)
         if(node->GetSize() < leaf_node_size_lower_threshold_ || 
           node->GetSize() > leaf_node_size_upper_threshold_) {
           return false;
@@ -1067,6 +1141,7 @@ class BPlusTree : public BPlusTreeBase {
     } else {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       /* Size of Node is correct */
+      if(current_node != root)
       if(node->GetSize() < inner_node_size_lower_threshold_ || 
         node->GetSize() > inner_node_size_upper_threshold_) {
         return false;
@@ -1250,9 +1325,12 @@ class BPlusTree : public BPlusTreeBase {
     right, ie containing values with keys greater than them.
   */
 
-  void Insert(const KeyElementPair element) {
+  bool Insert(const KeyElementPair element, std::function<bool(const ValueType)> predicate) {
     /* If root is NULL then we make a Leaf Node.
      */
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
+
     if (root == NULL) {
       KeyNodePointerPair p1, p2;
       p1.first = element.first;
@@ -1292,6 +1370,14 @@ class BPlusTree : public BPlusTreeBase {
     auto location_greater_key_leaf = node->FindLocation(element.first, this);
     if (location_greater_key_leaf != node->Begin()) {
       if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+
+        auto itr_list = (location_greater_key_leaf - 1)->second->begin();
+        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if(ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
+            return false;
+          }
+          itr_list++;
+        }
         (location_greater_key_leaf - 1)->second->push_back(element.second);
         finished_insertion = true;
       }  
@@ -1391,7 +1477,7 @@ class BPlusTree : public BPlusTreeBase {
       new_root_node->InsertElementIfPossible(inner_node_element,
       new_root_node->FindLocation(inner_node_element.first, this));
     }
-    return;
+    return true;
   }
 
   /*
@@ -1448,7 +1534,7 @@ class BPlusTree : public BPlusTreeBase {
    *
    */
   ~BPlusTree() {
-    // FreeTree();
+    FreeTree();
   }
 };  // class BPlusTree
 

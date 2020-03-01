@@ -51,8 +51,11 @@ class BPlusTreeIndex final : public Index {
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
     
-    bplustree_->Insert(bplustree_->GetElement(index_key, location));
-    const bool UNUSED_ATTRIBUTE result = true;
+    auto predicate = [txn](const TupleSlot slot) -> bool {
+      return false;
+    };
+
+    const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
 
     TERRIER_ASSERT(
         result,
@@ -72,10 +75,10 @@ class BPlusTreeIndex final : public Index {
     TERRIER_ASSERT(metadata_.GetSchema().Unique(), "This Insert is designed for indexes with uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    bool predicate_satisfied UNUSED_ATTRIBUTE = false;
+    // bool predicate_satisfied = false;
 
     // The predicate checks if any matching keys have write-write conflicts or are still visible to the calling txn.
-    auto predicate UNUSED_ATTRIBUTE = [txn](const TupleSlot slot) -> bool {
+    auto predicate = [txn](const TupleSlot slot) -> bool {
       const auto *const data_table = slot.GetBlock()->data_table_;
       const auto has_conflict = data_table->HasConflict(*txn, slot);
       const auto is_visible = data_table->IsVisible(*txn, slot);
@@ -84,9 +87,10 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
-    const bool UNUSED_ATTRIBUTE result = true;
+    const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
+;
 
-    TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
+    // TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 
     if (result) {
       // Register an abort action with the txn context in case of rollback
@@ -140,6 +144,8 @@ class BPlusTreeIndex final : public Index {
 
     // Avoid resizing our value_list, even if it means over-provisioning
     value_list->reserve(results.size());
+
+    bplustree_->FindValueOfKey(index_key, *value_list);
 
     // Perform visibility check on result
     for (const auto &result : results) {

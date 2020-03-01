@@ -110,7 +110,7 @@ class BPlusTreeIndexTests : public TerrierTest {
  * in the index and table.
  */
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_UniqueInsert) {
+TEST_F(BPlusTreeIndexTests, UniqueInsert) {
   const uint32_t num_inserts = 100000;  // number of tuples/primary keys for each worker to attempt to insert
   auto workload = [&](uint32_t worker_id) {
     auto *const key_buffer =
@@ -534,7 +534,7 @@ TEST_F(BPlusTreeIndexTests, DISABLED_ScanLimitDescending) {
 
 // Verifies that primary key insert fails on write-write conflict
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey1) {
+TEST_F(BPlusTreeIndexTests, UniqueKey1) {
   auto *txn0 = txn_manager_->BeginTransaction();
 
   // txn 0 inserts into table
@@ -595,7 +595,7 @@ TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey1) {
 
 // Verifies that primary key insert fails on visible key conflict
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey2) {
+TEST_F(BPlusTreeIndexTests, UniqueKey2) {
   auto *txn0 = txn_manager_->BeginTransaction();
 
   // txn 0 inserts into table
@@ -651,7 +651,7 @@ TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey2) {
 
 // Verifies that primary key insert fails on same txn trying to insert key twice
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey3) {
+TEST_F(BPlusTreeIndexTests, UniqueKey3) {
   auto *txn0 = txn_manager_->BeginTransaction();
 
   // txn 0 inserts into table
@@ -702,7 +702,7 @@ TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey3) {
 
 // Verifies that primary key insert fails even if conflicting transaction is an uncommitted delete
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey4) {
+TEST_F(BPlusTreeIndexTests, UniqueKey4) {
   auto *txn0 = txn_manager_->BeginTransaction();
 
   // txn 0 inserts into table
@@ -784,7 +784,7 @@ TEST_F(BPlusTreeIndexTests, DISABLED_UniqueKey4) {
 //
 // This test confirms that we are not susceptible to the DIRTY READS and UNREPEATABLE READS anomalies
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_CommitInsert1) {
+TEST_F(BPlusTreeIndexTests, CommitInsert1) {
   auto *txn0 = txn_manager_->BeginTransaction();
 
   // txn 0 inserts into table
