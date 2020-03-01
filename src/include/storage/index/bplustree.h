@@ -149,6 +149,8 @@ class BPlusTree : public BPlusTreeBase {
   // KeyType - List of ValueType pair
   using KeyValuePair = std::pair<KeyType, std::list<ValueType> *>;
 
+  using KeyElementPair = std::pair<KeyType, ValueType>;
+
   /*
    * enum class NodeType - Bw-Tree node type
    */
@@ -1234,28 +1236,25 @@ class BPlusTree : public BPlusTreeBase {
     right, ie containing values with keys greater than them.
   */
 
-  void Insert(const KeyValuePair element) {
-
+  void Insert(const KeyElementPair element) {
     /* If root is NULL then we make a Leaf Node.
-    */
-    if(root == NULL) {
+     */
+    if (root == NULL) {
       KeyNodePointerPair p1, p2;
       p1.first = element.first;
       p2.first = element.first;
       p1.second = NULL;
       p2.second = NULL;
-      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_,
-                                   NodeType::LeafType, 0,
-                                   leaf_node_size_upper_threshold_,
-                                   p1, p2);
+      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
+                                            leaf_node_size_upper_threshold_, p1, p2);
     }
 
-    BaseNode * current_node = root;
+    BaseNode *current_node = root;
     // Stack of pointers
     std::vector<BaseNode *> node_list;
 
     // Traversing Down and maintaining a stack of pointers
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
       node_list.push_back(current_node);
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       // Note that Find Location returns the location of first element
@@ -1263,11 +1262,11 @@ class BPlusTree : public BPlusTreeBase {
       auto index_pointer = node->FindLocation(element.first, this);
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
-      if(index_pointer != node->Begin()) {
+      if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      }
-      else current_node = node->GetLowKeyPair().second;
+      } else
+        current_node = node->GetLowKeyPair().second;
     }
 
     bool finished_insertion = false;
@@ -1275,43 +1274,54 @@ class BPlusTree : public BPlusTreeBase {
     // This is the element that has to be inserted into the inner nodes.
     KeyNodePointerPair inner_node_element;
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    if(node->InsertElementIfPossible(element, node->FindLocation(element.first, this))) {
-      // If you can directly insert in the leaf - Insertion is over
+
+    auto location_greater_key_leaf = node->FindLocation(element.first, this);
+    if (location_greater_key_leaf != node->Begin() && (location_greater_key_leaf - 1)->first == element.first) {
+      (location_greater_key_leaf - 1)->second->push_back(element.second);
       finished_insertion = true;
     } else {
-      // Otherwise you split the node
-      // Now pay attention to the fact that when we copy up the right pointer
-      // remains same and the new node after splitting that gets returned to us
-      // becomes the right pointer.
-      // Thus our inner node element will contain the first key of the splitted
-      // Node and a pointer to the splitted node.
-      auto splitted_node = node->SplitNode();
-      auto splitted_node_begin = splitted_node->Begin();
-      // To decide which leaf to put in the element
-      if(splitted_node_begin->first > element.first) {
-        node->InsertElementIfPossible(element, node->FindLocation(element.first, this));
+      auto value_list = new std::list<ValueType>();
+      value_list->push_back(element.second);
+      KeyValuePair key_list_value;
+      key_list_value.first = element.first;
+      key_list_value.second = value_list;
+      if (node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this))) {
+        // If you can directly insert in the leaf - Insertion is over
+        finished_insertion = true;
       } else {
-        splitted_node->InsertElementIfPossible(element,
-          splitted_node->FindLocation(element.first, this));
-      }
+        // Otherwise you split the node
+        // Now pay attention to the fact that when we copy up the right pointer
+        // remains same and the new node after splitting that gets returned to us
+        // becomes the right pointer.
+        // Thus our inner node element will contain the first key of the splitted
+        // Node and a pointer to the splitted node.
+        auto splitted_node = node->SplitNode();
+        auto splitted_node_begin = splitted_node->Begin();
+        // To decide which leaf to put in the element
+        if (splitted_node_begin->first > element.first) {
+          node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this));
+        } else {
+          splitted_node->InsertElementIfPossible(key_list_value, splitted_node->FindLocation(element.first, this));
+        }
 
-      // Set the siblings correctly
-      // node_next = node_right
-      // node_next_left = splitted
-      // splitted_right = node_right
-      // node_right = splitted
-      // splitted_left = node
-      if(node->GetElasticHighKeyPair()->second != NULL) {
-        auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
-        node_next->GetElasticLowKeyPair()->second = splitted_node;
-      }
-      splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
-      node->GetElasticHighKeyPair()->second = splitted_node;
-      splitted_node->GetElasticLowKeyPair()->second = node;
+        // Set the siblings correctly
+        // node_next = node_right
+        // node_next_left = splitted
+        // splitted_right = node_right
+        // node_right = splitted
+        // splitted_left = node
+        if (node->GetElasticHighKeyPair()->second != NULL) {
+          auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
+          node_next->GetElasticLowKeyPair()->second = splitted_node;
+        }
+        splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
+        node->GetElasticHighKeyPair()->second = splitted_node;
+        splitted_node->GetElasticLowKeyPair()->second = node;
 
-      // Set the inner node that needs to be passed to the parents
-      inner_node_element.first = splitted_node->Begin()->first;
-      inner_node_element.second = splitted_node;
+        // Set the inner node that needs to be passed to the parents
+        inner_node_element.first = splitted_node->Begin()->first;
+        inner_node_element.second = splitted_node;
+      }
     }
 
     while(!finished_insertion && node_list.size() > 0) {
@@ -1364,25 +1374,6 @@ class BPlusTree : public BPlusTreeBase {
       new_root_node->FindLocation(inner_node_element.first, this));
     }
     return;
-  }
-
-  /*    InsertWrapper - adds key and value in the tree
-   *    Checks if the key is available in the tree and
-   *    retrieves value list for the key. Appends the
-   *    value in the value list or inserts a
-   *    new list in the tree
-  */
-  void InsertWrapper(KeyType key, ValueType value) {
-    // retrieve the value list of the key from tree
-    std::list<ValueType> * value_list_p = FindValueOfKey(key);
-    if(value_list_p == NULL) { // list doesn't exist
-      auto value_list = new std::list<ValueType>();
-      value_list->push_back(value);
-      Insert(KeyValuePair(key, value_list));
-    }
-    else { // just push back in the existing list
-      value_list_p->push_back(value);
-    }
   }
 
   /*
