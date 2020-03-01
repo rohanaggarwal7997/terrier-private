@@ -519,8 +519,8 @@ void ScanKeyTest() {
     int k = itr_map->first;
     std::vector<int> values = keys_values[k];
     std::vector<int> result;
-    FindValueOfKey(k, result);
-    for(int i = 0; i < values.size(); i++) {
+    bplustree->FindValueOfKey(k, result);
+    for(unsigned i = 0; i < values.size(); i++) {
       EXPECT_EQ(values[i] == result[i], true);
     }
     itr_map++;

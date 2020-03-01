@@ -1183,13 +1183,14 @@ class BPlusTree : public BPlusTreeBase {
     for(;itr!=keys_values.end();itr++) {
       KeyType k = itr->first;
       std::vector<ValueType> values = keys_values[k];
-      std::list<ValueType> * values_list_p = FindValueOfKey(k);
-      if(values_list_p == NULL) {
+      std::vector<ValueType> result;
+      FindValueOfKey(k, result);
+      if(result.size() == 0) {
         return false;
       }
-      auto it = values_list_p->begin();
+      auto it = result.begin();
       for(unsigned j = 0; j < values.size(); j++) {
-        if (it == values_list_p->end()) {
+        if (it == result.end()) {
           return false;
         }
         if(values[j] != *(it)) {
