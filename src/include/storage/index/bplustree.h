@@ -1316,6 +1316,58 @@ class BPlusTree : public BPlusTreeBase {
     return true;
   }
 
+  /*
+  Returns current heap usage
+  */
+  size_t GetHeapUsage() {
+
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    if(root == NULL) return 0;
+
+    std::queue<BaseNode *> bfs_queue;
+    std::queue<BaseNode *> all_nodes;
+    bfs_queue.push(root);
+
+    while(!bfs_queue.empty()) {
+      BaseNode * node = bfs_queue.front();
+      bfs_queue.pop();
+      all_nodes.push(node);
+      if(node->GetType() != NodeType::LeafType) {
+        bfs_queue.push(node->GetLowKeyPair().second);
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair * element_p = current_node->Begin();
+          element_p!=current_node->End(); element_p ++) {
+          bfs_queue.push(element_p->second);
+        }
+      }
+    }
+
+    size_t heap_size = 0;
+    while(!all_nodes.empty()) {
+      BaseNode * node = all_nodes.front();
+      all_nodes.pop();
+      if(node->GetType() != NodeType::LeafType) {
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        // TODO: Little bit wrong
+        heap_size += sizeof(BaseNode) + current_node->GetSize() * sizeof(KeyNodePointerPair);
+      } else {
+        auto current_node = 
+          reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+        heap_size += sizeof(BaseNode) + current_node->GetSize() * sizeof(KeyValuePair);
+        for (KeyValuePair * element_p = current_node->Begin();
+             element_p!=current_node->End(); element_p ++) {
+          if(element_p->second != NULL) {
+            // destroy the list of values in a key
+            heap_size += element_p->second->size() * sizeof(ValueType);
+          }
+        }
+      }
+    }
+    return heap_size;
+  }
+
 
 
   /*
