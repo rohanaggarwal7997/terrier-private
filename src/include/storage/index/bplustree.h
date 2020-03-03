@@ -1531,13 +1531,13 @@ class BPlusTree : public BPlusTreeBase {
         // splitted_right = node_right
         // node_right = splitted
         // splitted_left = node
-        // if (node->GetElasticHighKeyPair()->second != NULL) {
-        //   auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
-        //   node_next->GetElasticLowKeyPair()->second = splitted_node;
-        // }
-        // splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
-        // node->GetElasticHighKeyPair()->second = splitted_node;
-        // splitted_node->GetElasticLowKeyPair()->second = node;
+        if (node->GetElasticHighKeyPair()->second != NULL) {
+          auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
+          node_next->GetElasticLowKeyPair()->second = splitted_node;
+        }
+        splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
+        node->GetElasticHighKeyPair()->second = splitted_node;
+        splitted_node->GetElasticLowKeyPair()->second = node;
 
         // Set the inner node that needs to be passed to the parents
         inner_node_element.first = splitted_node->Begin()->first;
@@ -1784,9 +1784,22 @@ class BPlusTree : public BPlusTreeBase {
         inner_left_sibling->InsertElementIfPossible(to_insert, inner_left_sibling->End());
       }
 
+      /*
+      Fixing sibling pointers code
+      */
+      if(left_sibling->GetType() == NodeType::LeafType) {
+        left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
+        if(child->GetHighKeyPair().second != NULL)
+        reinterpret_cast<ElasticNode<KeyValuePair> *>(child->GetHighKeyPair().second)
+          ->GetElasticLowKeyPair()->second = left_sibling;
+      }
+
+
       left_sibling->MergeNode(child);
       child->FreeElasticNode();
       parent->Erase(index);
+
+
     } else {
       ElasticNode<ElementType> * right_sibling = 
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
@@ -1801,6 +1814,17 @@ class BPlusTree : public BPlusTreeBase {
         to_insert.second = current_low_pointer;
         inner_child->InsertElementIfPossible(to_insert, inner_child->End());
       }
+
+      /*
+      Fixing sibling pointers code
+      */
+      if(child->GetType() == NodeType::LeafType) {
+        child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
+        if(right_sibling->GetHighKeyPair().second != NULL)
+        reinterpret_cast<ElasticNode<KeyValuePair> *>(right_sibling->GetHighKeyPair().second)
+          ->GetElasticLowKeyPair()->second = child;
+      }
+
 
       child->MergeNode(right_sibling);
       right_sibling->FreeElasticNode();

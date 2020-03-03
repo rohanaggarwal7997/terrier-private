@@ -1340,7 +1340,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
 
   BasicBPlusTreeInsertTestNoSplittingOfRoot();
   BasicBPlusTreeInsertTestSplittingOfRootOnce();
-  // LargeKeyRandomInsertSiblingSequenceTest();
+  LargeKeyRandomInsertSiblingSequenceTest();
   // // DuplicateKeyValueInsertTest();
   // // ScanKeyTest();
   LargeKeySequentialInsertAndRetrievalTest();
