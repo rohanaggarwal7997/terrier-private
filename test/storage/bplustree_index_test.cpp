@@ -326,7 +326,7 @@ TEST_F(BPlusTreeIndexTests, ScanAscending) {
  * exactly, etc.)
  */
 // NOLINTNEXTLINE
-TEST_F(BPlusTreeIndexTests, DISABLED_ScanDescending) {
+TEST_F(BPlusTreeIndexTests, ScanDescending) {
   // populate index with [0..20] even keys
   std::map<int32_t, storage::TupleSlot> reference;
   auto *const insert_txn = txn_manager_->BeginTransaction();

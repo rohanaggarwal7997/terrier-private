@@ -1506,7 +1506,66 @@ class BPlusTree : public BPlusTreeBase {
     return;
   }
 
+  /*
+    Scan Descending - Duplicates the Scan Descending Behaviour in bwtree_index.h
+  */
+  void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
+    if(root == NULL) {
+      return;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_high_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    element_p = node->FindLocation(index_high_key, this);
+    if(element_p != node->Begin()) {
+      // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+      element_p --;
+      // }
+    } else {
+      if(node->GetLowKeyPair().second == NULL) return;
+      else {
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        element_p = node->End() - 1;
+      }
+    }
+
+    while(KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+        value_list->push_back(*itr_list);
+        itr_list++;
+      }
+
+      element_p--;
+      if(element_p == node->Begin() - 1) {
+        if(node->GetLowKeyPair().second == NULL) break;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        element_p = node->End() - 1;
+      }
+    } 
+  }
 
   /*
     Insert - adds element in the tree
