@@ -845,6 +845,65 @@ void LargeKeyRandomInsertAndDeleteTest() {
   delete bplustree;
 }
 
+void DuplicateKeyDeleteTest() {
+
+  auto predicate = [](const int slot) -> bool {
+      return false;
+    };
+
+  // Insert keys
+  auto bplustree = new BPlusTree<int, int>;
+  bplustree->SetInnerNodeSizeUpperThreshold(10);
+  bplustree->SetLeafNodeSizeUpperThreshold(10);
+  bplustree->SetInnerNodeSizeLowerThreshold(4);
+  bplustree->SetLeafNodeSizeLowerThreshold(4);
+  std::map<int, std::set<int>> key_vals;
+  for(unsigned i=0; i<10000; i++) {
+    BPlusTree<int, int>::KeyElementPair p1;
+    int k = i%100; // 100 different keys 
+    int v = rand()%5000; // 100 values per key
+    if (key_vals.count(k) == 0) {
+      std::set<int> s;
+      s.insert(v);
+      key_vals[k] = s;                                   
+    } else {
+      while(key_vals[k].count(v) != 0) v++;
+      key_vals[k].insert(v);
+    } 
+    p1.first = k;
+    p1.second = v;
+    bplustree->Insert(p1, predicate);
+  }
+
+  for(unsigned i=0; i<100; i++) {
+    BPlusTree<int, int>::KeyElementPair p1;
+    int k = i;
+    for (unsigned j=0; j<10; j++) {
+      // delete 10 vals per key
+      auto it = key_vals[k].begin();
+      int v = (*it);
+      key_vals[k].erase(v);
+      p1.first = k;
+      p1.second = v;
+      bplustree->Delete(bplustree->GetRoot(), p1);
+    }
+  }
+
+  for(unsigned i=0; i<100; i++) {
+    BPlusTree<int, int>::KeyElementPair p1;
+    int k = i;
+    std::set<int> values = key_vals[k];
+    std::vector<int> result;
+    bplustree->FindValueOfKey(k, result);
+    for(unsigned i = 0; i < result.size(); i++) {
+      EXPECT_EQ(values.count(result[i]), 1);
+      values.erase(result[i]);    
+    }
+  }
+  
+  delete bplustree;
+}
+
 void StructuralIntegrityTestWithRandomInsert() {
 
   auto predicate = [](const TupleSlot slot) -> bool {
@@ -1391,26 +1450,27 @@ void BPlusTreeCompleteDeleteAndReinsertTest() {
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
 
-  BasicBPlusTreeInsertTestNoSplittingOfRoot();
-  BasicBPlusTreeInsertTestSplittingOfRootOnce();
-  LargeKeyRandomInsertSiblingSequenceTest();
-  KeyRandomInsertAndDeleteSiblingSequenceTest();
-  DuplicateKeyValueInsertTest();
-  ScanKeyTest();
-  LargeKeySequentialInsertAndRetrievalTest();
-  LargeKeyRandomInsertAndRetrievalTest();
-  StructuralIntegrityTestWithRandomInsert();
-  StructuralIntegrityTestWithCornerCase();
-  StructuralIntegrityTestWithCornerCase2();
-  BasicBPlusTreeDeleteTestNoSplittingOfRoot();
-  LargeKeySequentialInsertAndDeleteTest();
-  LargeKeyRandomInsertAndDeleteTest();
-  StructuralIntegrityTestWithRandomInsertAndDelete();
-  StructuralIntegrityTestWithRandomInsertAndDelete2();
-  LargeStructuralIntegrityVerificationTest();
-  StructuralIntegrityTestWithRandomInsertAndDelete2Reverse();
-  LargeStructuralIntegrityVerificationTestReverse();
-  BPlusTreeCompleteDeleteAndReinsertTest();
+  // BasicBPlusTreeInsertTestNoSplittingOfRoot();
+  // BasicBPlusTreeInsertTestSplittingOfRootOnce();
+  // LargeKeyRandomInsertSiblingSequenceTest();
+  // KeyRandomInsertAndDeleteSiblingSequenceTest();
+  // DuplicateKeyValueInsertTest();
+  // ScanKeyTest();
+  // LargeKeySequentialInsertAndRetrievalTest();
+  // LargeKeyRandomInsertAndRetrievalTest();
+  // StructuralIntegrityTestWithRandomInsert();
+  // StructuralIntegrityTestWithCornerCase();
+  // StructuralIntegrityTestWithCornerCase2();
+  // BasicBPlusTreeDeleteTestNoSplittingOfRoot();
+  // LargeKeySequentialInsertAndDeleteTest();
+  // LargeKeyRandomInsertAndDeleteTest();
+  DuplicateKeyDeleteTest();
+  // StructuralIntegrityTestWithRandomInsertAndDelete();
+  // StructuralIntegrityTestWithRandomInsertAndDelete2();
+  // LargeStructuralIntegrityVerificationTest();
+  // StructuralIntegrityTestWithRandomInsertAndDelete2Reverse();
+  // LargeStructuralIntegrityVerificationTestReverse();
+  // BPlusTreeCompleteDeleteAndReinsertTest();
 }
 
 } // namespace terrier::storage::index
