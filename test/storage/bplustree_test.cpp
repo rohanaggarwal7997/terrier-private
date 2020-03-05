@@ -1450,27 +1450,27 @@ void BPlusTreeCompleteDeleteAndReinsertTest() {
 // NOLINTNEXTLINE
 TEST_F(BPlusTreeTests, InsertTests) {
 
-  // BasicBPlusTreeInsertTestNoSplittingOfRoot();
-  // BasicBPlusTreeInsertTestSplittingOfRootOnce();
-  // LargeKeyRandomInsertSiblingSequenceTest();
-  // KeyRandomInsertAndDeleteSiblingSequenceTest();
-  // DuplicateKeyValueInsertTest();
-  // ScanKeyTest();
-  // LargeKeySequentialInsertAndRetrievalTest();
-  // LargeKeyRandomInsertAndRetrievalTest();
-  // StructuralIntegrityTestWithRandomInsert();
-  // StructuralIntegrityTestWithCornerCase();
-  // StructuralIntegrityTestWithCornerCase2();
-  // BasicBPlusTreeDeleteTestNoSplittingOfRoot();
-  // LargeKeySequentialInsertAndDeleteTest();
-  // LargeKeyRandomInsertAndDeleteTest();
+  BasicBPlusTreeInsertTestNoSplittingOfRoot();
+  BasicBPlusTreeInsertTestSplittingOfRootOnce();
+  LargeKeyRandomInsertSiblingSequenceTest();
+  KeyRandomInsertAndDeleteSiblingSequenceTest();
+  DuplicateKeyValueInsertTest();
+  ScanKeyTest();
+  LargeKeySequentialInsertAndRetrievalTest();
+  LargeKeyRandomInsertAndRetrievalTest();
+  StructuralIntegrityTestWithRandomInsert();
+  StructuralIntegrityTestWithCornerCase();
+  StructuralIntegrityTestWithCornerCase2();
+  BasicBPlusTreeDeleteTestNoSplittingOfRoot();
+  LargeKeySequentialInsertAndDeleteTest();
+  LargeKeyRandomInsertAndDeleteTest();
   DuplicateKeyDeleteTest();
-  // StructuralIntegrityTestWithRandomInsertAndDelete();
-  // StructuralIntegrityTestWithRandomInsertAndDelete2();
-  // LargeStructuralIntegrityVerificationTest();
-  // StructuralIntegrityTestWithRandomInsertAndDelete2Reverse();
-  // LargeStructuralIntegrityVerificationTestReverse();
-  // BPlusTreeCompleteDeleteAndReinsertTest();
+  StructuralIntegrityTestWithRandomInsertAndDelete();
+  StructuralIntegrityTestWithRandomInsertAndDelete2();
+  LargeStructuralIntegrityVerificationTest();
+  StructuralIntegrityTestWithRandomInsertAndDelete2Reverse();
+  LargeStructuralIntegrityVerificationTestReverse();
+  BPlusTreeCompleteDeleteAndReinsertTest();
 }
 
 } // namespace terrier::storage::index
