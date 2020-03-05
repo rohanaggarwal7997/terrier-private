@@ -202,6 +202,7 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+    bplustree_->ScanLimitDescending(index_low_key, index_high_key, value_list, limit);
   }
 };
 
