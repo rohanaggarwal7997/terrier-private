@@ -553,17 +553,18 @@ void DuplicateKeyValueInsertTest() {
   auto bplustree = new BPlusTree<int, int>;
   bplustree->SetInnerNodeSizeUpperThreshold(5);
   bplustree->SetLeafNodeSizeUpperThreshold(5);
-  std::unordered_map<int, std::vector<int> > keys_values;
+  std::unordered_map<int, std::set<int> > keys_values;
   for(unsigned i=0; i<100000; i++) {
-    int k = rand()%1000;
-    int v = rand()%500000;
+    int k = i%1000; // there will be 100 inserts for same key
+    int v = rand()%50; // expect one duplicate value per key
     if(keys_values.count(k) == 0) {
-      std::vector<int> value_list;
-      value_list.push_back(v);
+      std::set<int> value_list;
+      value_list.insert(v);
       keys_values[k] = value_list;
-    }
-    else {
-      keys_values[k].push_back(v);
+    } else {
+      if (keys_values[k].count(v) == 0) {
+        keys_values[k].insert(v);
+      }
     }
     BPlusTree<int, int>::KeyElementPair p1;
     p1.first = k;
@@ -584,29 +585,37 @@ void ScanKeyTest() {
   auto bplustree = new BPlusTree<int, int>;
   bplustree->SetInnerNodeSizeUpperThreshold(5);
   bplustree->SetLeafNodeSizeUpperThreshold(5);
-  std::unordered_map<int, std::vector<int> > keys_values;
+  std::unordered_map<int, std::set<int> > keys_values;
   for(unsigned i=0; i<100000; i++) {
     int k = rand()%1000;
     int v = rand()%500000;
+    int is_value_unique = true;
     if(keys_values.count(k) == 0) {
-      std::vector<int> value_list;
-      value_list.push_back(v);
+      std::set<int> value_list;
+      value_list.insert(v);
       keys_values[k] = value_list;
     }
     else {
-      keys_values[k].push_back(v);
+      if (keys_values[k].count(v) != 0) {
+        is_value_unique = false;
+      } else {
+        keys_values[k].insert(v);
+      }
     }
-    bplustree->Insert(BPlusTree<int, int>::KeyElementPair(k, v), predicate);
+    bool is_inserted = bplustree->Insert(BPlusTree<int, int>::KeyElementPair(k, v), predicate);
+    EXPECT_EQ(is_value_unique, is_inserted);
   }
   auto itr_map = keys_values.begin();
   while(itr_map != keys_values.end()) {
     int k = itr_map->first;
-    std::vector<int> values = keys_values[k];
+    std::set<int> values = keys_values[k];
     std::vector<int> result;
     bplustree->FindValueOfKey(k, result);
-    for(unsigned i = 0; i < values.size(); i++) {
-      EXPECT_EQ(values[i] == result[i], true);
+    for(unsigned i = 0; i < result.size(); i++) {
+      EXPECT_EQ(values.count(result[i]), 1);
+      values.erase(result[i]);    
     }
+    EXPECT_EQ(values.size(), 0);
     itr_map++;
   }
   
@@ -1341,8 +1350,8 @@ TEST_F(BPlusTreeTests, InsertTests) {
   BasicBPlusTreeInsertTestNoSplittingOfRoot();
   BasicBPlusTreeInsertTestSplittingOfRootOnce();
   LargeKeyRandomInsertSiblingSequenceTest();
-  // // DuplicateKeyValueInsertTest();
-  // // ScanKeyTest();
+  DuplicateKeyValueInsertTest();
+  ScanKeyTest();
   LargeKeySequentialInsertAndRetrievalTest();
   LargeKeyRandomInsertAndRetrievalTest();
   StructuralIntegrityTestWithRandomInsert();
