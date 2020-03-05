@@ -10,6 +10,8 @@
 #include <unordered_set>
 
 #include "common/spin_latch.h"
+#include "storage/index/index.h"
+#include "storage/index/index_defs.h"
 
 
 namespace terrier::storage::index {
@@ -1436,6 +1438,198 @@ class BPlusTree : public BPlusTreeBase {
   }
 
 
+  /*
+    Scan Ascending - Duplicates the Scan Ascending Behaviour in bwtree_index.h
+  */
+  void ScanAscending(KeyType index_low_key, KeyType index_high_key, bool low_key_exists, uint32_t num_attrs,
+    bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
+    
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
+    if(root == NULL) {
+      return;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+      if(low_key_exists) {
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_low_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+      } else {
+        current_node = current_node->GetLowKeyPair().second;
+      }
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    if(low_key_exists) {
+      element_p = node->FindLocation(index_low_key, this);
+      if(element_p != node->Begin()) {
+        if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+          element_p --;
+        }
+      } 
+    } else {
+      element_p = node->Begin();
+    }
+
+    while ((limit == 0 || value_list->size() < limit) &&
+      (!high_key_exists || element_p->first.PartialLessThan(index_high_key, metadata, num_attrs))) {
+      
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+        value_list->push_back(*itr_list);
+        if(!(limit == 0 || value_list->size() < limit)) break;
+        itr_list++;
+      }
+
+      element_p++;
+      if(element_p == node->End()) {
+        if(node->GetHighKeyPair().second == NULL) break;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+        element_p = node->Begin();
+      }
+    }
+
+    return;
+  }
+
+  /*
+    Scan Descending - Duplicates the Scan Descending Behaviour in bwtree_index.h
+  */
+  void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
+
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
+    if(root == NULL) {
+      return;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_high_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    element_p = node->FindLocation(index_high_key, this);
+    if(element_p != node->Begin()) {
+      // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+      element_p --;
+      // }
+    } else {
+      if(node->GetLowKeyPair().second == NULL) return;
+      else {
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        element_p = node->End() - 1;
+      }
+    }
+
+    while(KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+
+        value_list->push_back(*itr_list);
+        itr_list++;
+      }
+
+      element_p--;
+      if(element_p == node->Begin() - 1) {
+        if(node->GetLowKeyPair().second == NULL) break;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        element_p = node->End() - 1;
+      }
+    } 
+  }
+
+  /*
+    Scan Limit Descending - Duplicates the Scan Limit Descending Behaviour in bwtree_index.h
+  */
+  void ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
+    uint32_t limit) {
+
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
+    if(root == NULL) {
+      return;
+    }
+
+    BaseNode * current_node = root;
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_high_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    element_p = node->FindLocation(index_high_key, this);
+    if(element_p != node->Begin()) {
+      // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+      element_p --;
+      // }
+    } else {
+      if(node->GetLowKeyPair().second == NULL) return;
+      else {
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        element_p = node->End() - 1;
+      }
+    }
+
+    while((value_list->size() < limit) && KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+        value_list->push_back(*itr_list);
+        if(!(value_list->size() < limit)) break;
+        itr_list++;
+      }
+
+      element_p--;
+      if(element_p == node->Begin() - 1) {
+        if(node->GetLowKeyPair().second == NULL) break;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        element_p = node->End() - 1;
+      }
+    } 
+  }
 
   /*
     Insert - adds element in the tree
@@ -1558,8 +1752,6 @@ class BPlusTree : public BPlusTreeBase {
       } else {
         // otherwise we have to recursively split again
 
-        /*TODO: Some problem here - the leftmost pointer is not set properly
-        Have to add code to set it properly*/
         auto splitted_node = inner_node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
         if(KeyCmpGreater(splitted_node_begin->first, inner_node_element.first)) {
@@ -1834,6 +2026,15 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     return;
+  }
+
+  /*
+  Delete with Lock
+  Takes a coarse grained lock and calls the delete function
+  */
+  bool DeleteWithLock(const KeyElementPair &element) {
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    return Delete(root, element);
   } 
 
   /*
@@ -1857,7 +2058,7 @@ class BPlusTree : public BPlusTreeBase {
       auto leaf_position = node->FindLocation(element.first, this);
       if (leaf_position != node->Begin()) {
         leaf_position -= 1;
-        if (leaf_position->first == element.first) {
+        if (KeyCmpEqual(leaf_position->first, element.first)) {
 
           bool element_present = false;
           auto itr_list = (leaf_position)->second->begin();
