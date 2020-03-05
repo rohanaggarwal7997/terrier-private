@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdio.h>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <queue>
@@ -706,7 +706,8 @@ class BPlusTree : public BPlusTreeBase {
     bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
       if(GetSize() >= this->GetItemCount()) return false;
       if(end - location > 0)
-      memmove(location + 1, location, (end - location)*sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(location + 1), reinterpret_cast<void *>(location),
+        (end - location)*sizeof(ElementType));
       new (location) ElementType{element};
       end = end + 1;
       return true;
@@ -722,7 +723,7 @@ class BPlusTree : public BPlusTreeBase {
         this->GetItemCount(), *this->GetElasticLowKeyPair(), *this->GetElasticHighKeyPair());
       ElementType * copy_from_location = Begin() + ((this->GetSize()) / 2);
       // Can be memcopy
-      memmove(new_node->Begin(), copy_from_location,
+      std::memmove(reinterpret_cast<void *>(new_node->Begin()), reinterpret_cast<void *>(copy_from_location),
         (end - copy_from_location)*sizeof(ElementType));
       new_node->SetEnd((end - copy_from_location));
       end = copy_from_location;
@@ -744,7 +745,8 @@ class BPlusTree : public BPlusTreeBase {
         return false;
       }
 
-      memmove(this->End(), next_node->Begin(), (next_node->GetSize())*sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(this->End()),
+        reinterpret_cast<void *>(next_node->Begin()), (next_node->GetSize())*sizeof(ElementType));
       SetEnd(this->GetSize() + next_node->GetSize());
       return true;
     }
@@ -759,7 +761,7 @@ class BPlusTree : public BPlusTreeBase {
         SetEnd(0);
         return true;
       }
-      memmove(start, start + 1,
+      std::memmove(reinterpret_cast<void *>(start), reinterpret_cast<void *>(start + 1),
         (this->GetSize() - 1)*sizeof(ElementType));
       SetEnd(this->GetSize() - 1);
       return true;
@@ -791,7 +793,7 @@ class BPlusTree : public BPlusTreeBase {
         SetEnd(0);
         return true;
       }
-      memmove(start + i, start + i + 1,
+      std::memmove(reinterpret_cast<void *>(start + i), reinterpret_cast<void *>(start + i + 1),
         (this->GetSize() - i - 1)*sizeof(ElementType));
       SetEnd(this->GetSize() - 1);
       return true;
@@ -1856,6 +1858,29 @@ class BPlusTree : public BPlusTreeBase {
       if (leaf_position != node->Begin()) {
         leaf_position -= 1;
         if (leaf_position->first == element.first) {
+
+          bool element_present = false;
+          auto itr_list = (leaf_position)->second->begin();
+          while(itr_list != (leaf_position)->second->end()) {
+            if(ValueCmpEqual(*itr_list, element.second)) {
+              /*Delete element from list*/
+              (leaf_position)->second->erase(itr_list);
+              element_present = true;
+              break;
+            }
+            itr_list++;
+          }
+
+          /*Not Found - Return false*/
+          if(!element_present) {
+            return false;
+          }
+
+          if(leaf_position->second->size() > 0) {
+            return true;
+          }
+
+          /*If now the list is empty delete key-emptylist from the tree*/
           delete leaf_position->second;
           bool is_deleted = node->Erase(leaf_position - node->Begin());
           if (is_deleted && node->GetSize() == 0) {
