@@ -1238,7 +1238,7 @@ class BPlusTree : public BPlusTreeBase {
     is correct or not.
   */
   bool SiblingForwardCheck(std::set<KeyType> &keys) {
-    int key = *keys.begin();
+    KeyType key = *keys.begin();
     if(root == NULL) {
       return false;
     }
@@ -1285,7 +1285,7 @@ class BPlusTree : public BPlusTreeBase {
     is correct or not.
   */
   bool SiblingBackwardCheck(std::set<KeyType> &keys) {
-    int key = *keys.rbegin();
+    KeyType key = *keys.rbegin();
     if(root == NULL) {
       return false;
     }

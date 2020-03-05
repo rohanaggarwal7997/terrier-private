@@ -543,6 +543,50 @@ void LargeKeyRandomInsertSiblingSequenceTest() {
   delete bplustree;
 }
 
+void KeyRandomInsertAndDeleteSiblingSequenceTest() {
+
+  auto predicate = [](const int slot) -> bool {
+      return false;
+    };
+
+  // Insert keys
+  auto bplustree = new BPlusTree<int, int>;
+  bplustree->SetInnerNodeSizeUpperThreshold(10);
+  bplustree->SetLeafNodeSizeUpperThreshold(10);
+  bplustree->SetInnerNodeSizeLowerThreshold(4);
+  bplustree->SetLeafNodeSizeLowerThreshold(4);
+  std::set<int> keys;
+  for(unsigned i=0; i<1000; i++) {
+    BPlusTree<int, int>::KeyElementPair p1;
+    int k = rand()%500000;
+    while(keys.find(k) != keys.end()) k++;
+    keys.insert(k);
+    p1.first = k;
+    p1.second = k;
+    bplustree->Insert(p1, predicate);
+  }
+
+  EXPECT_EQ(bplustree->SiblingForwardCheck(keys), true);
+  EXPECT_EQ(bplustree->SiblingBackwardCheck(keys), true);
+
+  for(unsigned i=0; i<500; i++) {
+    BPlusTree<int, int>::KeyElementPair p1;
+    int key_index = rand()%keys.size();
+    auto it = keys.begin();
+    std::advance(it, key_index);
+    int k = *it;
+    keys.erase(k);
+    p1.first = k;
+    p1.second = k;
+    bplustree->Delete(bplustree->GetRoot(), p1);
+  }
+
+  EXPECT_EQ(bplustree->SiblingForwardCheck(keys), true);
+  EXPECT_EQ(bplustree->SiblingBackwardCheck(keys), true);
+  
+  delete bplustree;
+}
+
 void DuplicateKeyValueInsertTest() {
 
   auto predicate = [](const int slot) -> bool {
@@ -1350,6 +1394,7 @@ TEST_F(BPlusTreeTests, InsertTests) {
   BasicBPlusTreeInsertTestNoSplittingOfRoot();
   BasicBPlusTreeInsertTestSplittingOfRootOnce();
   LargeKeyRandomInsertSiblingSequenceTest();
+  KeyRandomInsertAndDeleteSiblingSequenceTest();
   DuplicateKeyValueInsertTest();
   ScanKeyTest();
   LargeKeySequentialInsertAndRetrievalTest();
