@@ -1240,7 +1240,7 @@ class BPlusTree : public BPlusTreeBase {
     is correct or not.
   */
   bool SiblingForwardCheck(std::set<KeyType> &keys) {
-    int key = *keys.begin();
+    KeyType key = *keys.begin();
     if(root == NULL) {
       return false;
     }
@@ -1287,7 +1287,7 @@ class BPlusTree : public BPlusTreeBase {
     is correct or not.
   */
   bool SiblingBackwardCheck(std::set<KeyType> &keys) {
-    int key = *keys.rbegin();
+    KeyType key = *keys.rbegin();
     if(root == NULL) {
       return false;
     }
@@ -1332,25 +1332,25 @@ class BPlusTree : public BPlusTreeBase {
    * check if the values_list in the tree have the same values as the map given
    * in the function.
    */
-  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::vector<ValueType> >& keys_values) {
+  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::set<ValueType> >& keys_values) {
     auto itr = keys_values.begin();
     for(;itr!=keys_values.end();itr++) {
       KeyType k = itr->first;
-      std::vector<ValueType> values = keys_values[k];
+      std::set<ValueType> values = keys_values[k];
       std::vector<ValueType> result;
       FindValueOfKey(k, result);
       if(result.size() == 0) {
         return false;
       }
-      auto it = result.begin();
-      for(unsigned j = 0; j < values.size(); j++) {
-        if (it == result.end()) {
+      for(auto it = result.begin(); it != result.end(); it++) {
+        if(values.count(*(it)) == 0) {
           return false;
+        } else {
+          values.erase(*(it));
         }
-        if(values[j] != *(it)) {
-          return false;
-        }
-        it++;
+      }
+      if (values.size() != 0) {
+        return false;
       }
     }
     return true;
