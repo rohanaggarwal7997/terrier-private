@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdio>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <list>
@@ -189,7 +189,7 @@ class BPlusTree : public BPlusTreeBase {
      * We only compare keys since there should not be duplicated
      * keys inside an inner node
      */
-    inline bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
+    bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
       // First compare keys for relation
       return (*key_cmp_obj_p_)(knp1.first, knp2.first);
     }
@@ -219,7 +219,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * operator() - Compares key-NodeID pair by comparing keys
      */
-    inline bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
+    bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
       return (*key_eq_obj_p_)(knp1.first, knp2.first);
     }
   };
@@ -248,7 +248,7 @@ class BPlusTree : public BPlusTreeBase {
      * We use XOR to combine hashes of the key and value together into one
      * single hash value
      */
-    inline size_t operator()(const KeyNodePointerPair &knp) const { return (*key_hash_obj_p_)(knp.first); }
+    size_t operator()(const KeyNodePointerPair &knp) const { return (*key_hash_obj_p_)(knp.first); }
   };
 
   ///////////////////////////////////////////////////////////////////
@@ -279,7 +279,7 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function only compares keys with KeyType. For +/-Inf
      * the wrapped raw key comparator will fail
      */
-    inline bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
+    bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
       return (*key_cmp_obj_p_)(kvp1.first, kvp2.first);
     }
   };
@@ -311,7 +311,7 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function only compares keys with KeyType. For +/-Inf
      * the wrapped raw key comparator will fail
      */
-    inline bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
+    bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
       return ((*key_eq_obj_p_)(kvp1.first, kvp2.first)) && ((*value_eq_obj_p_)(kvp1.second, kvp2.second));
     }
   };
@@ -331,33 +331,33 @@ class BPlusTree : public BPlusTreeBase {
    * been removed from the newest implementation, and this function
    * compares KeyType specified in template argument.
    */
-  inline bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj_(key1, key2); }
+  bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj_(key1, key2); }
 
   /*
    * KeyCmpEqual() - Compare a pair of keys for equality
    *
    * This functions compares keys for equality relation
    */
-  inline bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj_(key1, key2); }
+  bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj_(key1, key2); }
 
   /*
    * KeyCmpGreaterEqual() - Compare a pair of keys for >= relation
    *
    * It negates result of keyCmpLess()
    */
-  inline bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
+  bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
 
   /*
    * KeyCmpGreater() - Compare a pair of keys for > relation
    *
    * It flips input for keyCmpLess()
    */
-  inline bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
+  bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
 
   /*
    * KeyCmpLessEqual() - Compare a pair of keys for <= relation
    */
-  inline bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
+  bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
 
   ///////////////////////////////////////////////////////////////////
   // Value Comparison Member
@@ -366,7 +366,7 @@ class BPlusTree : public BPlusTreeBase {
   /*
    * ValueCmpEqual() - Compares whether two values are equal
    */
-  inline bool ValueCmpEqual(const ValueType &v1, const ValueType &v2) { return value_eq_obj_(v1, v2); }
+  bool ValueCmpEqual(const ValueType &v1, const ValueType &v2) { return value_eq_obj_(v1, v2); }
 
   /*
    * class NodeMetaData - Holds node metadata in an object
@@ -402,7 +402,7 @@ class BPlusTree : public BPlusTreeBase {
     NodeType type_;
 
     // This is the height of the node
-    short depth_;
+    int depth_;
 
     // This counts the total number of items in the node
     int item_count_;
@@ -415,7 +415,7 @@ class BPlusTree : public BPlusTreeBase {
         : low_key_p_{p_low_key_p},
           high_key_p_{p_high_key_p},
           type_{p_type},
-          depth_{static_cast<short>(p_depth)},
+          depth_{p_depth},
           item_count_{p_item_count} {}
   };
 
@@ -443,14 +443,14 @@ class BPlusTree : public BPlusTreeBase {
      *
      * This method does not allow overridding
      */
-    inline NodeType GetType() const { return metadata_.type_; }
+    NodeType GetType() const { return metadata_.type_; }
 
     /*
      * GetNodeMetaData() - Returns a const reference to node metadata
      *
      * Please do not override this method
      */
-    inline const NodeMetaData &GetNodeMetaData() const { return metadata_; }
+    const NodeMetaData &GetNodeMetaData() const { return metadata_; }
 
     /*
      * IsInnerNode() - Returns true if the node is an inner node
@@ -459,7 +459,7 @@ class BPlusTree : public BPlusTreeBase {
      * If the top of delta chain is an inner node then just do not collect
      * and use the node directly
      */
-    inline bool IsInnerNode() const { return GetType() == NodeType::InnerType; }
+    bool IsInnerNode() const { return GetType() == NodeType::InnerType; }
 
     /*
      * GetLowKey() - Returns the low key of the current base node
@@ -468,7 +468,7 @@ class BPlusTree : public BPlusTreeBase {
      * and pointers should be set to nullptr, accessing the low key of
      * a leaf node would result in Segmentation Fault
      */
-    inline const KeyType &GetLowKey() const { return metadata_.low_key_p->first; }
+    const KeyType &GetLowKey() const { return metadata_.low_key_p->first; }
 
     /*
      * GetHighKey() - Returns a reference to the high key of current node
@@ -476,24 +476,24 @@ class BPlusTree : public BPlusTreeBase {
      * This function could be called for all node types including leaf nodes
      * and inner nodes.
      */
-    inline const KeyType &GetHighKey() const { return metadata_.high_key_p_->first; }
+    const KeyType &GetHighKey() const { return metadata_.high_key_p_->first; }
 
     /*
      * GetHighKeyPair() - Returns the pointer to high key node id pair
      */
-    inline const KeyNodePointerPair &GetHighKeyPair() const { return *metadata_.high_key_p_; }
+    const KeyNodePointerPair &GetHighKeyPair() const { return *metadata_.high_key_p_; }
 
     /*
      * GetLowKeyPair() - Returns the pointer to low key node id pair
      *
      * The return value is nullptr for LeafNode and its delta chain
      */
-    inline const KeyNodePointerPair &GetLowKeyPair() const { return *metadata_.low_key_p_; }
+    const KeyNodePointerPair &GetLowKeyPair() const { return *metadata_.low_key_p_; }
 
     /*
      * GetNextNodeID() - Returns the next NodeID of the current node
      */
-    inline BaseNode *GetNextNodeID() const { return metadata_.high_key_p_->second; }
+    BaseNode *GetNextNodeID() const { return metadata_.high_key_p_->second; }
 
     /*
      * GetLowKeyNodeID() - Returns the NodeID for low key
@@ -501,42 +501,42 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function should not be called for leaf nodes
      * since the low key node ID for leaf node is not defined
      */
-    inline BaseNode *GetLowKeyNodeID() const { return metadata_.low_key_p_->second; }
+    BaseNode *GetLowKeyNodeID() const { return metadata_.low_key_p_->second; }
 
     /*
      * GetDepth() - Returns the Height of the Node
      */
-    inline int GetDepth() const { return metadata_.depth_; }
+    int GetDepth() const { return metadata_.depth_; }
 
     /*
      * GetItemCount() - Returns the item count of the current node
      */
-    inline int GetItemCount() const { return metadata_.item_count_; }
+    int GetItemCount() const { return metadata_.item_count_; }
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
      */
-    inline void SetLowKeyPair(const KeyNodePointerPair *p_low_key_p) { metadata_.low_key_p_ = p_low_key_p; }
+    void SetLowKeyPair(const KeyNodePointerPair *p_low_key_p) { metadata_.low_key_p_ = p_low_key_p; }
 
     /*
      * SetHighKeyPair() - Sets the high key pair of metdtata
      */
-    inline void SetHighKeyPair(const KeyNodePointerPair *p_high_key_p) { metadata_.high_key_p_ = p_high_key_p; }
+    void SetHighKeyPair(const KeyNodePointerPair *p_high_key_p) { metadata_.high_key_p_ = p_high_key_p; }
 
     /*
       SetType() - Sets the type of metadata
     */
-    inline void SetType(const NodeType input_type) { metadata_.type_ = input_type; }
+    void SetType(const NodeType input_type) { metadata_.type_ = input_type; }
 
     /*
       SetDepth() - Sets the depth of metadata
     */
-    inline void SetDepth(const short input_depth) { metadata_.depth_ = input_depth; }
+    void SetDepth(const int input_depth) { metadata_.depth_ = input_depth; }
 
     /*
       SetItemCount() - Sets the item_count of metadata
     */
-    inline void SetItemCount(const int input_item_count) { metadata_.item_count_ = input_item_count; }
+    void SetItemCount(const int input_item_count) { metadata_.item_count_ = input_item_count; }
   };
 
   /*
@@ -544,7 +544,7 @@ class BPlusTree : public BPlusTreeBase {
    *                     and LeafNode
    *
    * Since for InnerNode and LeafNode, the number of elements is not a compile
-   * time known constant. However, for efficient tree traversal we must inline
+   * time known constant. However, for efficient tree traversal we must
    * all elements to reduce cache misses with workload that's less predictable
    */
   template <typename ElementType>
@@ -602,26 +602,26 @@ class BPlusTree : public BPlusTreeBase {
     /*
      IntializeEnd() - Make end = start
     */
-    inline void InitializeEnd() { end_ = start_; }
+    void InitializeEnd() { end_ = start_; }
 
     /*
      SetEnd() - Make end = start + offset
     */
-    inline void SetEnd(int offset) { end_ = start_ + offset; }
+    void SetEnd(int offset) { end_ = start_ + offset; }
 
     /*
      * Begin() - Returns a begin iterator to its internal array
      */
-    inline ElementType *Begin() { return start_; }
+    ElementType *Begin() { return start_; }
 
-    inline const ElementType *Begin() const { return start_; }
+    const ElementType *Begin() const { return start_; }
 
     /*
      * End() - Returns an end iterator that is similar to the one for vector
      */
-    inline ElementType *End() { return end_; }
+    ElementType *End() { return end_; }
 
-    inline const ElementType *End() const { return end_; }
+    const ElementType *End() const { return end_; }
 
     /*
      * REnd() - Returns the element before the first element
@@ -629,9 +629,9 @@ class BPlusTree : public BPlusTreeBase {
      * Note that since we returned an invalid pointer into the array, the
      * return value should not be modified and is therefore of const type
      */
-    inline const ElementType *REnd() { return start_ - 1; }
+    const ElementType *REnd() { return start_ - 1; }
 
-    inline const ElementType *REnd() const { return start_ - 1; }
+    const ElementType *REnd() const { return start_ - 1; }
 
     /*
      * PushBack() - Push back an element
@@ -640,7 +640,7 @@ class BPlusTree : public BPlusTreeBase {
      * which is invisible to the compiler. Therefore we must call placement
      * operator new to do the job
      */
-    inline void PushBack(const ElementType &element) {
+    void PushBack(const ElementType &element) {
       // Placement new + copy constructor using end pointer
       new (end_) ElementType{element};
 
@@ -653,7 +653,7 @@ class BPlusTree : public BPlusTreeBase {
      *
      * The overloaded PushBack() could also push an array of elements
      */
-    inline void PushBack(const ElementType *copy_start_p, const ElementType *copy_end_p) {
+    void PushBack(const ElementType *copy_start_p, const ElementType *copy_end_p) {
       // Make sure the loop will come to an end
       TERRIER_ASSERT(copy_start_p <= copy_end_p, "Loop will not come to an end.");
 
@@ -670,7 +670,7 @@ class BPlusTree : public BPlusTreeBase {
     void PrintElasticNode() {
       for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
         // Manually calls destructor when the node is destroyed
-        std::cout << element_p->first << " ";
+        // std::cout << element_p->first << " ";
       }
     }
     /*
@@ -679,7 +679,9 @@ class BPlusTree : public BPlusTreeBase {
     */
     bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
       if (GetSize() >= this->GetItemCount()) return false;
-      if (end_ - location > 0) memmove(location + 1, location, (end_ - location) * sizeof(ElementType));
+      if (end_ - location > 0)
+        std::memmove(reinterpret_cast<void *>(location + 1), reinterpret_cast<void *>(location),
+                     (end_ - location) * sizeof(ElementType));
       new (location) ElementType{element};
       end_ = end_ + 1;
       return true;
@@ -695,7 +697,8 @@ class BPlusTree : public BPlusTreeBase {
                                         *this->GetElasticLowKeyPair(), *this->GetElasticHighKeyPair());
       ElementType *copy_from_location = Begin() + ((this->GetSize()) / 2);
       // Can be memcopy
-      memmove(new_node->Begin(), copy_from_location, (end_ - copy_from_location) * sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(new_node->Begin()), reinterpret_cast<void *>(copy_from_location),
+                   (end_ - copy_from_location) * sizeof(ElementType));
       new_node->SetEnd((end_ - copy_from_location));
       end_ = copy_from_location;
       return new_node;
@@ -711,7 +714,8 @@ class BPlusTree : public BPlusTreeBase {
         SetEnd(0);
         return true;
       }
-      memmove(start_, start_ + 1, (this->GetSize() - 1) * sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(start_), reinterpret_cast<void *>(start_ + 1),
+                   (this->GetSize() - 1) * sizeof(ElementType));
       SetEnd(this->GetSize() - 1);
       return true;
     }
@@ -732,26 +736,26 @@ class BPlusTree : public BPlusTreeBase {
      * Note that the return type is integer since we use integer to represent
      * the size of a node
      */
-    inline int GetSize() const { return static_cast<int>(End() - Begin()); }
+    int GetSize() const { return static_cast<int>(End() - Begin()); }
     /*
      * SetElasticLowKeyPair() - Sets the low key of Elastic Node
      */
-    inline void SetElasticLowKeyPair(const KeyNodePointerPair &p_low_key) { low_key_ = p_low_key; }
+    void SetElasticLowKeyPair(const KeyNodePointerPair &p_low_key) { low_key_ = p_low_key; }
 
     /*
      * SetElasticHighKeyPair() - Sets the high key of Elastic Node
      */
-    inline void SetElasticHighKeyPair(const KeyNodePointerPair &p_high_key) { high_key_ = p_high_key; }
+    void SetElasticHighKeyPair(const KeyNodePointerPair &p_high_key) { high_key_ = p_high_key; }
 
     /*
      * GetElasticLowKeyPair() - Returns a pointer to the low key current Elastic node
      */
-    inline KeyNodePointerPair *GetElasticLowKeyPair() { return &low_key_; }
+    KeyNodePointerPair *GetElasticLowKeyPair() { return &low_key_; }
 
     /*
      * GetElasticHighKeyPair() - Returns a pointer to the high key of current Elastic node
      */
-    inline KeyNodePointerPair *GetElasticHighKeyPair() { return &high_key_; }
+    KeyNodePointerPair *GetElasticHighKeyPair() { return &high_key_; }
 
     /*
      * Get() - Static helper function that constructs a elastic node of
@@ -763,10 +767,10 @@ class BPlusTree : public BPlusTreeBase {
      * new to initialize it, such that the node could be freed using operator
      * delete later on
      */
-    inline static ElasticNode *Get(int size,  // Number of elements
-                                   NodeType p_type, int p_depth,
-                                   int p_item_count,  // Usually equal to size
-                                   const KeyNodePointerPair &p_low_key, const KeyNodePointerPair &p_high_key) {
+    static ElasticNode *Get(int size,  // Number of elements
+                            NodeType p_type, int p_depth,
+                            int p_item_count,  // Usually equal to size
+                            const KeyNodePointerPair &p_low_key, const KeyNodePointerPair &p_high_key) {
       // Allocte memory for
       //   1. AllocationMeta (chunk)
       //   2. node meta
@@ -802,14 +806,14 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * At() - Access element with bounds checking under debug mode
      */
-    inline ElementType &At(const int index) {
+    ElementType &At(const int index) {
       // The index must be inside the valid range
       TERRIER_ASSERT(index < GetSize(), "Index out of range.");
 
       return *(Begin() + index);
     }
 
-    inline const ElementType &At(const int index) const {
+    const ElementType &At(const int index) const {
       // The index must be inside the valid range
       TERRIER_ASSERT(index < GetSize(), "Index out of range.");
 
@@ -890,12 +894,12 @@ class BPlusTree : public BPlusTreeBase {
   /*
     Get Root - Returns the current root
   */
-  inline BaseNode *GetRoot() { return root_; }
+  BaseNode *GetRoot() { return root_; }
 
   /*
     Get Element
   */
-  inline KeyElementPair GetElement(KeyType key, ValueType value) {
+  KeyElementPair GetElement(KeyType key, ValueType value) {
     KeyElementPair p1;
     p1.first = key;
     p1.second = value;
@@ -989,7 +993,7 @@ class BPlusTree : public BPlusTreeBase {
       auto node_elastic = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
       node_elastic->PrintElasticNode();
     }
-    std::cout << '\t';
+    // std::cout << '\t';
   }
 
   /*
@@ -1002,7 +1006,7 @@ class BPlusTree : public BPlusTreeBase {
     bfs_queue.push(root_);
 
     // print root
-    std::cout << "Printing Root " << std::endl;
+    // std::cout << "Printing Root " << std::endl;
     if (root_->GetType() != NodeType::LeafType) {
       auto root_elastic = reinterpret_cast<ElasticNode<KeyValuePair> *>(root_);
       root_elastic->PrintElasticNode();
@@ -1016,7 +1020,7 @@ class BPlusTree : public BPlusTreeBase {
       bfs_queue.pop();
       all_nodes.push(node);
       if (node->GetType() != NodeType::LeafType) {
-        std::cout << "printing children " << std::endl;
+        // std::cout << "printing children " << std::endl;
 
         bfs_queue.push(node->GetLowKeyPair().second);
         PrintTreeNode(node->GetLowKeyPair().second);
@@ -1028,7 +1032,7 @@ class BPlusTree : public BPlusTreeBase {
         }
       }
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
   }
 
   /*
@@ -1332,7 +1336,7 @@ class BPlusTree : public BPlusTreeBase {
       p1.second = NULL;
       p2.second = NULL;
       root_ = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
-                                            leaf_node_size_upper_threshold_, p1, p2);
+                                             leaf_node_size_upper_threshold_, p1, p2);
     }
 
     BaseNode *current_node = root_;
@@ -1375,7 +1379,7 @@ class BPlusTree : public BPlusTreeBase {
         finished_insertion = true;
       }
     }
-    if (finished_insertion) {
+    if (!finished_insertion) {
       auto value_list = new std::list<ValueType>();
       value_list->push_back(element.second);
       KeyValuePair key_list_value;
@@ -1460,7 +1464,7 @@ class BPlusTree : public BPlusTreeBase {
       p1.second = old_root;                /*This initialization matters*/
       p2.second = NULL;                    /*This is a dummy initialization*/
       root_ = ElasticNode<KeyNodePointerPair>::Get(inner_node_size_upper_threshold_, NodeType::InnerType,
-                                                  root_->GetDepth() + 1, inner_node_size_upper_threshold_, p1, p2);
+                                                   root_->GetDepth() + 1, inner_node_size_upper_threshold_, p1, p2);
       auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
       new_root_node->InsertElementIfPossible(inner_node_element,
                                              new_root_node->FindLocation(inner_node_element.first, this));
@@ -1494,9 +1498,10 @@ class BPlusTree : public BPlusTreeBase {
   //    return true;
   //  }
 
-  explicit BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{}, KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{},
-            KeyHashFunc p_key_hash_obj = KeyHashFunc{}, ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{},
-            ValueHashFunc p_value_hash_obj = ValueHashFunc{})
+  explicit BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
+                     KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
+                     ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{},
+                     ValueHashFunc p_value_hash_obj = ValueHashFunc{})
       : BPlusTreeBase(),
         // Key comparator, equality checker and hasher
         key_cmp_obj_{p_key_cmp_obj},
