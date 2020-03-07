@@ -1720,7 +1720,6 @@ class BPlusTree : public BPlusTreeBase {
      */
     root_latch.LockExclusive();
     bool got_root_latch = true;
-    // std::cout<<"I reached here 1"<<std::endl;
 
     if (root == NULL) {
       KeyNodePointerPair p1, p2;
@@ -1732,12 +1731,10 @@ class BPlusTree : public BPlusTreeBase {
                                             leaf_node_size_upper_threshold_, p1, p2);
     }
 
-    // std::cout<<"I reached here 2"<<std::endl;
 
     BaseNode *current_node = root;
 
 
-    // std::cout<<current_node<<std::endl;
     /*
       Locking Code
     */
@@ -1746,7 +1743,6 @@ class BPlusTree : public BPlusTreeBase {
       Locking Code End
     */
 
-    // std::cout<<"I reached here 3"<<std::endl;
 
     // Stack of pointers
     std::vector<BaseNode *> node_list;
@@ -1755,7 +1751,6 @@ class BPlusTree : public BPlusTreeBase {
     while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
 
-    // std::cout<<"I reached here 4"<<std::endl;
 
       /*
         Locking Code
@@ -1767,7 +1762,6 @@ class BPlusTree : public BPlusTreeBase {
         Locking Code End
       */
 
-    // std::cout<<"I reached here 5"<<std::endl;
 
 
 
@@ -1793,7 +1787,6 @@ class BPlusTree : public BPlusTreeBase {
       */
     }
 
-    // std::cout<<"I reached here 6"<<std::endl;
 
 
     bool finished_insertion = false;
@@ -1921,7 +1914,6 @@ class BPlusTree : public BPlusTreeBase {
     // If still insertion is not finished we have to split the root node.
     // Remember the root must have been split by now.
     if(!finished_insertion) {
-    // std::cout<<"I am here with root latch"<<std::endl;
       auto old_root = root;
       KeyNodePointerPair p1, p2;
       p1.first = inner_node_element.first; /*This is a dummy initialization*/
@@ -2066,7 +2058,6 @@ class BPlusTree : public BPlusTreeBase {
         // Borrow one
 
         if(child->GetType() == NodeType::InnerType) {
-          // std::cout<<"I am here"<<std::endl;
           auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
           auto inner_right_sibling = reinterpret_cast<InnerNode *> (right_sibling);
           /* 
@@ -2074,7 +2065,6 @@ class BPlusTree : public BPlusTreeBase {
           */
           /*A*/auto parent_key = (parent->Begin() + index + 1)->first;
           /*c*/auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second;
-          // std::cout<<parent_key<<std::endl; 
           KeyNodePointerPair to_insert;
           to_insert.first = parent_key;
           to_insert.second = current_low_pointer;
