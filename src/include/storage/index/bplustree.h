@@ -1502,8 +1502,17 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     BaseNode * current_node = root;
+    BaseNode * parent = NULL;
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch.Unlock();
+    /*
+      Locking Code End
+    */
 
-    // Traversing Down to the right leaf node
+    // Traversing Down to the correct leaf node
     while(current_node->GetType() != NodeType::LeafType) {
 
       if(low_key_exists) {
@@ -1513,6 +1522,9 @@ class BPlusTree : public BPlusTreeBase {
         auto index_pointer = node->FindLocation(index_low_key, this);
         // Thus we have to go in the left side of location which will be the
         // pointer of the previous location.
+
+        // Set parent for releasing the lock
+        parent = current_node;
         if(index_pointer != node->Begin()) {
           index_pointer -= 1;
           current_node = index_pointer->second;
@@ -1521,6 +1533,14 @@ class BPlusTree : public BPlusTreeBase {
       } else {
         current_node = current_node->GetLowKeyPair().second;
       }
+      /*
+        Locking Code
+      */
+      current_node->GetNodeSharedLatch();
+      parent->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1549,12 +1569,22 @@ class BPlusTree : public BPlusTreeBase {
       element_p++;
       if(element_p == node->End()) {
         if(node->GetHighKeyPair().second == NULL) break;
+        parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+        current_node = node;
+        /*
+        Locking Code
+        */
+        current_node->GetNodeSharedLatch();
+        parent->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
         element_p = node->Begin();
       }
     }
 
-    root_latch.Unlock();
+    current_node->ReleaseNodeLatch();
 
     return;
   }
