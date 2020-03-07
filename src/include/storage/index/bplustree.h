@@ -533,6 +533,11 @@ class BPlusTree : public BPlusTreeBase {
     void GetNodeExclusiveLatch() { metadata.node_latch_.LockExclusive(); }
 
     /*
+     * GetNodeSharedLatch() - Obtain the Shared lock to the current node
+     */
+    void GetNodeSharedLatch() { metadata.node_latch_.LockShared(); }
+
+    /*
      * ReleaseNodeLatch() - Release the lock to the current node
      */
     void ReleaseNodeLatch() { metadata.node_latch_.Unlock(); }            
@@ -618,10 +623,10 @@ class BPlusTree : public BPlusTreeBase {
       Free elastic node
     */
     void FreeElasticNode() {
-      for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
-        // Manually calls destructor when the node is destroyed
-        element_p->~ElementType();
-      }
+      // for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
+      //   // Manually calls destructor when the node is destroyed
+      //   element_p->~ElementType();
+      // }
       ElasticNode *beginningAllocation = this;
       delete[] reinterpret_cast<char *>(beginningAllocation); 
     }
@@ -1058,7 +1063,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
 
-    root_latch.LockExclusive();
+    root_latch.LockShared();
 
     if(root == NULL) {
       root_latch.Unlock();
@@ -1066,6 +1071,17 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     BaseNode * current_node = root;
+    BaseNode * parent = NULL;
+
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch.Unlock();
+    /*
+      Locking Code End
+    */
+
 
     // Traversing Down to the right leaf node
     while(current_node->GetType() != NodeType::LeafType) {
@@ -1075,11 +1091,22 @@ class BPlusTree : public BPlusTreeBase {
       auto index_pointer = node->FindLocation(key, this);
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
+      parent = current_node;
       if(index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
       }
       else current_node = node->GetLowKeyPair().second;
+
+
+      /*
+        Locking Code
+      */
+      current_node->GetNodeSharedLatch();
+      parent->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1091,12 +1118,13 @@ class BPlusTree : public BPlusTreeBase {
           result.push_back(*itr_list);
           itr_list++;
         }
-        root_latch.Unlock();
+
+        current_node->ReleaseNodeLatch();
         return;
       }
     }
 
-    root_latch.Unlock();
+    current_node->ReleaseNodeLatch();
   }
 
   void PrintTreeNode(BaseNode* node) {
@@ -1692,7 +1720,7 @@ class BPlusTree : public BPlusTreeBase {
      */
     root_latch.LockExclusive();
     bool got_root_latch = true;
-    std::cout<<"I reached here 1"<<std::endl;
+    // std::cout<<"I reached here 1"<<std::endl;
 
     if (root == NULL) {
       KeyNodePointerPair p1, p2;
@@ -1704,12 +1732,12 @@ class BPlusTree : public BPlusTreeBase {
                                             leaf_node_size_upper_threshold_, p1, p2);
     }
 
-    std::cout<<"I reached here 2"<<std::endl;
+    // std::cout<<"I reached here 2"<<std::endl;
 
     BaseNode *current_node = root;
 
 
-    std::cout<<current_node<<std::endl;
+    // std::cout<<current_node<<std::endl;
     /*
       Locking Code
     */
@@ -1718,7 +1746,7 @@ class BPlusTree : public BPlusTreeBase {
       Locking Code End
     */
 
-    std::cout<<"I reached here 3"<<std::endl;
+    // std::cout<<"I reached here 3"<<std::endl;
 
     // Stack of pointers
     std::vector<BaseNode *> node_list;
@@ -1727,7 +1755,7 @@ class BPlusTree : public BPlusTreeBase {
     while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
 
-    std::cout<<"I reached here 4"<<std::endl;
+    // std::cout<<"I reached here 4"<<std::endl;
 
       /*
         Locking Code
@@ -1739,7 +1767,7 @@ class BPlusTree : public BPlusTreeBase {
         Locking Code End
       */
 
-    std::cout<<"I reached here 5"<<std::endl;
+    // std::cout<<"I reached here 5"<<std::endl;
 
 
 
@@ -1765,7 +1793,7 @@ class BPlusTree : public BPlusTreeBase {
       */
     }
 
-    std::cout<<"I reached here 6"<<std::endl;
+    // std::cout<<"I reached here 6"<<std::endl;
 
 
     bool finished_insertion = false;
@@ -1886,14 +1914,14 @@ class BPlusTree : public BPlusTreeBase {
         inner_node_element.second = splitted_node;
         splitted_node->PopBegin();
       }
-      current_node->ReleaseNodeLatch();    
+      inner_node->ReleaseNodeLatch();    
     }
 
 
     // If still insertion is not finished we have to split the root node.
     // Remember the root must have been split by now.
     if(!finished_insertion) {
-    std::cout<<"I am here with root latch"<<std::endl;
+    // std::cout<<"I am here with root latch"<<std::endl;
       auto old_root = root;
       KeyNodePointerPair p1, p2;
       p1.first = inner_node_element.first; /*This is a dummy initialization*/
