@@ -578,7 +578,7 @@ void KeyRandomInsertAndDeleteSiblingSequenceTest() {
     keys.erase(k);
     p1.first = k;
     p1.second = k;
-    bplustree->Delete(bplustree->GetRoot(), p1);
+    bplustree->DeleteWithLock(p1);
   }
 
   EXPECT_EQ(bplustree->SiblingForwardCheck(keys), true);
@@ -693,7 +693,7 @@ void BasicBPlusTreeDeleteTestNoSplittingOfRoot() {
   for(unsigned i=0; i<100; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = i;
-    bplustree->Delete(bplustree->GetRoot(), p1);
+    bplustree->DeleteWithLock(p1);
     EXPECT_EQ(bplustree->IsPresent(i), false);
   }
   EXPECT_EQ(bplustree->GetRoot()==NULL, true);
@@ -752,7 +752,7 @@ void LargeKeySequentialInsertAndDeleteTest() {
   for(unsigned i=0; i<100000; i+=2) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = i;
-    bplustree->Delete(bplustree->GetRoot(), p1);
+    bplustree->DeleteWithLock(p1);
   }
 
   for(int i=0; i<100000; i+=2) {
@@ -827,7 +827,7 @@ void LargeKeyRandomInsertAndDeleteTest() {
   for(unsigned i = 0; i<50000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
-    bplustree->Delete(bplustree->GetRoot(), p1);
+    bplustree->DeleteWithLock(p1);
     iter++;
   }
 
@@ -885,7 +885,7 @@ void DuplicateKeyDeleteTest() {
       key_vals[k].erase(v);
       p1.first = k;
       p1.second = v;
-      bplustree->Delete(bplustree->GetRoot(), p1);
+      bplustree->DeleteWithLock(p1);
     }
   }
 
@@ -1037,7 +1037,7 @@ void StructuralIntegrityTestWithRandomInsertAndDelete() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *keys.begin();
     keys.erase(keys.begin());
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     std::set<int> newkeys = keys;
 
     // Structural Integrity Test Everytime
@@ -1100,7 +1100,7 @@ void LargeStructuralIntegrityVerificationTest() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
     keys.erase(iter);
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     std::set<int> newkeys = keys;
 
     // Structural Integrity Test Everytime
@@ -1133,7 +1133,7 @@ void LargeStructuralIntegrityVerificationTest() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
     keys.erase(iter);
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     std::set<int> newkeys = keys;
 
     // Structural Integrity Test Everytime
@@ -1197,7 +1197,7 @@ void LargeStructuralIntegrityVerificationTestReverse() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
     keys.erase(*iter);
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     std::set<int> newkeys = keys;
 
     // Structural Integrity Test Everytime
@@ -1231,7 +1231,7 @@ void LargeStructuralIntegrityVerificationTestReverse() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
     keys.erase(*iter);
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     std::set<int> newkeys = keys;
 
     // Structural Integrity Test Everytime
@@ -1289,7 +1289,7 @@ void StructuralIntegrityTestWithRandomInsertAndDelete2() {
     p1.first = *(it);
     it++;
     // keys.erase(keys.begin());
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     // std::cout << "-----------------Deleted " << p1.first << std::endl;
     // bplustree->PrintTree();        
   }
@@ -1349,7 +1349,7 @@ void StructuralIntegrityTestWithRandomInsertAndDelete2Reverse() {
     p1.first = *(it);
     it++;
     // keys.erase(keys.begin());
-    EXPECT_EQ(bplustree->Delete(bplustree->GetRoot(), p1), true);
+    EXPECT_EQ(bplustree->DeleteWithLock(p1), true);
     // std::cout << "-----------------Deleted " << p1.first << std::endl;
     // bplustree->PrintTree();        
   }
@@ -1400,7 +1400,7 @@ void BPlusTreeCompleteDeleteAndReinsertTest() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *keys.begin();
     keys.erase(keys.begin());
-    bplustree->Delete(bplustree->GetRoot(), p1);
+    bplustree->DeleteWithLock(p1);
     std::set<int> newkeys = keys;
     if(bplustree->GetRoot() != NULL) {
       EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),
@@ -1429,7 +1429,7 @@ void BPlusTreeCompleteDeleteAndReinsertTest() {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *keys.begin();
     keys.erase(keys.begin());
-    bplustree->Delete(bplustree->GetRoot(), p1);
+    bplustree->DeleteWithLock(p1);
     std::set<int> newkeys = keys;
     if(bplustree->GetRoot() != NULL) {
       EXPECT_EQ(bplustree->StructuralIntegrityVerification(*newkeys.begin(), *newkeys.rbegin(),

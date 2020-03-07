@@ -545,7 +545,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * GetLatchPointer() - Get the Latch Pointer of current node's latch
      */
-    SharedLatch * GetLatchPointer() { return &metadata.node_latch_; }             
+    common::SharedLatch * GetLatchPointer() { return &metadata.node_latch_; }             
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
@@ -1963,48 +1963,66 @@ class BPlusTree : public BPlusTreeBase {
   void DeleteRebalance(ElasticNode<KeyNodePointerPair> * parent, 
     BaseNode * input_child_pointer, int index, int node_lower_threshold) {
 
+    // We assume that we have exclusive lock for parent and only try to get lock for child nodes
+    /*Locking Code*/
+    // Get child lock before proceeding
+    input_child_pointer->GetNodeExclusiveLatch();
+    /*Locking Code End*/
+    
     auto child = reinterpret_cast<ElasticNode<ElementType> *>(input_child_pointer);
 
     if (child->GetSize() >= node_lower_threshold) {
+      /*Locking Code*/
+      input_child_pointer->ReleaseNodeLatch();
+      /*Locking Code End*/
+
       return;
     } 
 
     // Need to rebalance
     if (index > -1) {
+      BaseNode* left_sibling_base_node;
       ElasticNode<ElementType> * left_sibling;
       if(index == 0) {
+        left_sibling_base_node = parent->GetLowKeyPair().second;
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
       } else {
+        left_sibling_base_node = (parent->Begin() + index - 1)->second;
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
       }
+
+      /*Locking Code*/
+      // Get left sibling lock before checking for borrowing
+      left_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/
 
       if(left_sibling->GetSize() > node_lower_threshold) {
 
 
-      /*
-      This is for Inner Node only
-      Remember for leaf node - You cannot bring down A.
-      Capital chars represent Keys. Small chars represent nodes.                    
-                          A                                               C
-                        /   \                                          /     \
-                     [ B ]     [ C  D ]           ==                [B  A]    [D]                 
-                      /  \      /  \  \                             /  \  \   /  \
-                     a    b    c   d   e                           a   b   c  d   e
+        /*
+        This is for Inner Node only
+        Remember for leaf node - You cannot bring down A.
+        Capital chars represent Keys. Small chars represent nodes.                    
+                            A                                               C
+                          /   \                                          /     \
+                       [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                        /  \      /  \  \                             /  \  \   /  \
+                       a    b    c   d   e                           a   b   c  d   e
 
-          Initially
-         C - (parent->Begin() + index)-key
-         A - left sibling->Rbegin()->first
-         D - child->Begin()->first
-         d - child->lowkeypair().second
-         c - left sibling->Rbegin()->second
+            Initially
+           C - (parent->Begin() + index)-key
+           A - left sibling->Rbegin()->first
+           D - child->Begin()->first
+           d - child->lowkeypair().second
+           c - left sibling->Rbegin()->second
 
-          Finally
-         A - (parent->Begin() + index)-key
-         C - child->Begin()->first
-         c - child->lowkeypair().second
-         d - child->Begin()->second
-         D - (child->Begin() + 1)->first - Happens automatically
-      */
+            Finally
+           A - (parent->Begin() + index)-key
+           C - child->Begin()->first
+           c - child->lowkeypair().second
+           d - child->Begin()->second
+           D - (child->Begin() + 1)->first - Happens automatically
+        */
 
         // Borrow one
 
@@ -2039,13 +2057,32 @@ class BPlusTree : public BPlusTreeBase {
           */
           left_sibling->PopEnd();
         }
+
+        // Borrow successful, release child and left sibling locks
+        /*Locking Code*/
+        input_child_pointer->ReleaseNodeLatch();
+        left_sibling_base_node->ReleaseNodeLatch();
+        /*Locking Code End*/
+
         return;
       }
+
+      /*Locking Code*/
+      // Borrow unsuccessful, release left sibling locks
+      left_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
     }
 
     if(index < parent->GetSize() - 1) {
+      BaseNode* right_sibling_base_node = (parent->Begin() + index + 1)->second;
       ElasticNode<ElementType> * right_sibling = 
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+
+      /*Locking Code*/
+      // Get right sibling lock before checking for borrowing
+      right_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/  
+
       if(right_sibling->GetSize() > node_lower_threshold) {
 
 
@@ -2109,20 +2146,40 @@ class BPlusTree : public BPlusTreeBase {
           right_sibling->PopBegin();
           (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
         }
+
+        // Borrow successful, release child and left sibling locks
+        /*Locking Code*/
+        input_child_pointer->ReleaseNodeLatch();
+        right_sibling_base_node->ReleaseNodeLatch();
+        /*Locking Code End*/
+
         return;
       }
+
+      /*Locking Code*/
+      // Borrow unsuccessful, release right sibling locks
+      right_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
     }
 
     // Cannot redistribute, so we perform merge
     // We try to merge with left sibling first, if not possible 
     // merge with right sibling   
     if (index > -1) {
+      BaseNode* left_sibling_base_node;
       ElasticNode<ElementType> * left_sibling;
       if(index == 0) {
+        left_sibling_base_node = parent->GetLowKeyPair().second;
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
       } else {
+        left_sibling_base_node = (parent->Begin() + index - 1)->second;
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
       }
+
+      /*Locking Code*/
+      // Get left sibling lock before checking for borrowing
+      left_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/
 
       /*
                            A                                         
@@ -2148,21 +2205,51 @@ class BPlusTree : public BPlusTreeBase {
       Fixing sibling pointers code
       */
       if(left_sibling->GetType() == NodeType::LeafType) {
-        left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
-        if(child->GetHighKeyPair().second != NULL)
-        reinterpret_cast<ElasticNode<KeyValuePair> *>(child->GetHighKeyPair().second)
-          ->GetElasticLowKeyPair()->second = left_sibling;
+        if(child->GetHighKeyPair().second != NULL) {
+          BaseNode* new_right_sibling = child->GetHighKeyPair().second;
+
+          /*Locking Code*/
+          // Get right sibling lock before updating sibling pointers
+          new_right_sibling->GetNodeExclusiveLatch();
+          /*Locking Code End*/
+
+
+          left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
+          reinterpret_cast<ElasticNode<KeyValuePair> *>(child->GetHighKeyPair().second)
+            ->GetElasticLowKeyPair()->second = left_sibling;
+
+          /*Locking Code*/
+          // updating sibling pointers complete, release lock
+          new_right_sibling->ReleaseNodeLatch();
+          /*Locking Code End*/  
+
+        } else {
+          left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
+        }
       }
 
 
       left_sibling->MergeNode(child);
+
+      // Merge successful, release child and left sibling locks
+      /*Locking Code*/
+      input_child_pointer->ReleaseNodeLatch();
+      left_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
+
       child->FreeElasticNode();
       parent->Erase(index);
-
+      return;
 
     } else {
+      BaseNode* right_sibling_base_node = (parent->Begin() + index + 1)->second;
       ElasticNode<ElementType> * right_sibling = 
         reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+
+      /*Locking Code*/    
+      // Get left sibling lock before checking for borrowing
+      right_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/
 
       if(right_sibling->GetType() == NodeType::InnerType) {
         auto parent_key = (parent->Begin() + index + 1)->first;
@@ -2179,23 +2266,47 @@ class BPlusTree : public BPlusTreeBase {
       Fixing sibling pointers code
       */
       if(child->GetType() == NodeType::LeafType) {
-        child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
-        if(right_sibling->GetHighKeyPair().second != NULL)
-        reinterpret_cast<ElasticNode<KeyValuePair> *>(right_sibling->GetHighKeyPair().second)
-          ->GetElasticLowKeyPair()->second = child;
+        if(right_sibling->GetHighKeyPair().second != NULL) {
+          BaseNode* new_right_sibling = right_sibling->GetHighKeyPair().second;
+
+          /*Locking Code*/
+          // Get right sibling lock before updating sibling pointers
+          new_right_sibling->GetNodeExclusiveLatch();
+          /*Locking Code End*/
+
+          child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
+          reinterpret_cast<ElasticNode<KeyValuePair> *>(right_sibling->GetHighKeyPair().second)
+            ->GetElasticLowKeyPair()->second = child;
+
+          /*Locking Code*/
+          // updating sibling pointers complete, release lock
+          new_right_sibling->ReleaseNodeLatch();
+          /*Locking Code End*/
+        } else {
+          child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
+        }
       }
 
 
       child->MergeNode(right_sibling);
+
+      // Merge successful, release child and right sibling locks
+      /*Locking Code*/
+      input_child_pointer->ReleaseNodeLatch();
+      right_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
+
       right_sibling->FreeElasticNode();
       parent->Erase(index+1);
+      return;
     }
 
+    // Should never reach this point
     return;
   }
 
   /* RelaseLastLocksDelete - Releases the node's latch and pops it from the list*/
-  void RelaseLastLocksDelete(std::vector<SharedLatch *> * lock_list) {
+  void RelaseLastLocksDelete(std::vector<common::SharedLatch *> * lock_list) {
     if(lock_list->size() > 0) {
       (*lock_list->rbegin())->Unlock();
       lock_list->pop_back();
@@ -2208,7 +2319,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   bool DeleteWithLock(const KeyElementPair &element) {
 
-    std::vector<SharedLatch *> lock_list;
+    std::vector<common::SharedLatch *> lock_list;
 
 
     root_latch.LockExclusive();
@@ -2225,7 +2336,7 @@ class BPlusTree : public BPlusTreeBase {
    * exist. Return true if delete succeeds
    *
    */
-  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<SharedLatch *> * lock_list) {
+  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<common::SharedLatch *> * lock_list) {
     // If tree is empty, return false
     if (current_node == NULL) {
       return false;
@@ -2237,20 +2348,26 @@ class BPlusTree : public BPlusTreeBase {
     current_node->GetNodeExclusiveLatch();
 
     bool condition_for_underflow = true;
-    if(current_node == root && current_node->GetSize() > 1) {
-      condition_for_underflow = false;
+    if(current_node == root) {
+      if (current_node->GetType() == NodeType::InnerType
+          && (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > 1) {
+        condition_for_underflow = false;
+      } else if (current_node->GetType() == NodeType::LeafType
+          && (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > 1) {
+        condition_for_underflow = false;
+      } 
     }
     if(current_node != root && current_node->GetType() == NodeType::InnerType
-      && current_node->GetSize() > GetInnerNodeSizeLowerThreshold()) {
+      && (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > GetInnerNodeSizeLowerThreshold()) {
       condition_for_underflow = false;
     }
     if(current_node != root && current_node->GetType() == NodeType::LeafType
-      && current_node->GetSize() > GetLeafNodeSizeLowerThreshold()) {
+      && (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > GetLeafNodeSizeLowerThreshold()) {
       condition_for_underflow = false;
     }
 
     if(!condition_for_underflow) {
-      while(!lock_list.empty()) {
+      while(!lock_list->empty()) {
         (*lock_list->rbegin())->Unlock();
         lock_list->pop_back();
       }
@@ -2337,7 +2454,7 @@ class BPlusTree : public BPlusTreeBase {
         child_pointer = node->GetLowKeyPair().second;
         index = -1;
       }
-      bool is_deleted = Delete(child_pointer, element);
+      bool is_deleted = Delete(child_pointer, element, lock_list);
 
       // Now perform any rebalancing or merge on child if it becomes underfull
       if (is_deleted) {
