@@ -8,6 +8,8 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "common/spin_latch.h"
 
@@ -64,7 +66,6 @@ class BPlusTreeBase {
     leaf_node_size_lower_threshold_ = leaf_node_size_lower_threshold;
   }
 
- private:
  protected:
   /** upper size threshold for inner node split */
   int inner_node_size_upper_threshold_ = INNER_NODE_SIZE_UPPER_THRESHOLD;
@@ -152,7 +153,7 @@ class BPlusTree : public BPlusTreeBase {
   /*
    * enum class NodeType - Bw-Tree node type
    */
-  enum class NodeType : short {
+  enum class NodeType : int {
     InnerType = 0,
     // Data page type
     LeafType = 1
@@ -398,7 +399,7 @@ class BPlusTree : public BPlusTreeBase {
     // points to the item inside split node or merge right sibling branch
     const KeyNodePointerPair *high_key_p_;
 
-    // The type of the node; this is forced to be represented as a short type
+    // The type of the node
     NodeType type_;
 
     // This is the height of the node
@@ -929,8 +930,9 @@ class BPlusTree : public BPlusTreeBase {
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      } else
+      } else {
         current_node = node->GetLowKeyPair().second;
+      }
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -968,8 +970,9 @@ class BPlusTree : public BPlusTreeBase {
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      } else
+      } else {
         current_node = node->GetLowKeyPair().second;
+      }
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1092,19 +1095,21 @@ class BPlusTree : public BPlusTreeBase {
           return false;
         }
         /* Size of Node is correct */
-        if (current_node != root_)
+        if (current_node != root_) {
           if (node->GetSize() < leaf_node_size_lower_threshold_ || node->GetSize() > leaf_node_size_upper_threshold_) {
             return false;
           }
+        }
         keys.erase(element_p->first);
       }
     } else {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       /* Size of Node is correct */
-      if (current_node != root_)
+      if (current_node != root_) {
         if (node->GetSize() < inner_node_size_lower_threshold_ || node->GetSize() > inner_node_size_upper_threshold_) {
           return false;
         }
+      }
       return_answer &= this->StructuralIntegrityVerification(low_key, node->Begin()->first, keys,
                                                              current_node->GetLowKeyPair().second);
 
@@ -1146,8 +1151,9 @@ class BPlusTree : public BPlusTreeBase {
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      } else
+      } else {
         current_node = node->GetLowKeyPair().second;
+      }
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1192,8 +1198,9 @@ class BPlusTree : public BPlusTreeBase {
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      } else
+      } else {
         current_node = node->GetLowKeyPair().second;
+      }
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1355,8 +1362,9 @@ class BPlusTree : public BPlusTreeBase {
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      } else
+      } else {
         current_node = node->GetLowKeyPair().second;
+      }
     }
 
     bool finished_insertion = false;

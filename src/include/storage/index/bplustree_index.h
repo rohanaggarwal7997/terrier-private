@@ -86,7 +86,6 @@ class BPlusTreeIndex final : public Index {
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
     const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
-    ;
 
     // TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 
