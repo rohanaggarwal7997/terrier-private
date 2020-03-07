@@ -187,7 +187,11 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->ScanDescending(index_low_key, index_high_key, value_list);
+    bool scan_completed = false;
+    while(!scan_completed) {
+      value_list->clear();
+      scan_completed = bplustree_->ScanDescending(index_low_key, index_high_key, value_list);
+    }
   }
 
   void ScanLimitDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
@@ -202,7 +206,11 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->ScanLimitDescending(index_low_key, index_high_key, value_list, limit);
+    bool scan_completed = false;
+    while(!scan_completed) {
+      value_list->clear();
+      scan_completed = bplustree_->ScanLimitDescending(index_low_key, index_high_key, value_list, limit);
+    }
   }
 };
 

@@ -540,7 +540,17 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * ReleaseNodeLatch() - Release the lock to the current node
      */
-    void ReleaseNodeLatch() { metadata.node_latch_.Unlock(); }            
+    void ReleaseNodeLatch() { metadata.node_latch_.Unlock(); }
+
+    /*
+     * TryExclusiveLock() - Try to get the exclusive lock
+     */
+    bool TryExclusiveLock() { return metadata.node_latch_.TryExclusiveLock(); }
+
+    /*
+     * TrySharedLock() - Try to get the shared read lock
+     */
+    bool TrySharedLock() { return metadata.node_latch_.TryLockShared(); }
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
@@ -1592,16 +1602,25 @@ class BPlusTree : public BPlusTreeBase {
   /*
     Scan Descending - Duplicates the Scan Descending Behaviour in bwtree_index.h
   */
-  void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
+  bool ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
     root_latch.LockExclusive();
 
     if(root == NULL) {
       root_latch.Unlock();
-      return;
+      return true;
     }
 
     BaseNode * current_node = root;
+    BaseNode * parent = NULL;
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch.Unlock();
+    /*
+      Locking Code End
+    */
 
     // Traversing Down to the right leaf node
     while(current_node->GetType() != NodeType::LeafType) {
@@ -1612,11 +1631,23 @@ class BPlusTree : public BPlusTreeBase {
         auto index_pointer = node->FindLocation(index_high_key, this);
         // Thus we have to go in the left side of location which will be the
         // pointer of the previous location.
+
+        // set parent for crabbing
+        parent = node;
+
         if(index_pointer != node->Begin()) {
           index_pointer -= 1;
           current_node = index_pointer->second;
         }
         else current_node = node->GetLowKeyPair().second;
+        /*
+        Locking Code
+        */
+        current_node->GetNodeSharedLatch();
+        parent->ReleaseNodeLatch();
+        /*
+        Locking Code End
+        */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1628,10 +1659,17 @@ class BPlusTree : public BPlusTreeBase {
       // }
     } else {
       if(node->GetLowKeyPair().second == NULL) {
-        root_latch.Unlock();
-        return;
+        current_node->ReleaseNodeLatch();
+        return true;
       } else {
+        parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
         element_p = node->End() - 1;
       }
     }
@@ -1647,29 +1685,46 @@ class BPlusTree : public BPlusTreeBase {
 
       element_p--;
       if(element_p == node->Begin() - 1) {
+        parent = node;
         if(node->GetLowKeyPair().second == NULL) break;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
         element_p = node->End() - 1;
       }
-    } 
+    }
 
-    root_latch.Unlock();
+    current_node->ReleaseNodeLatch();
+    return true;
   }
 
   /*
     Scan Limit Descending - Duplicates the Scan Limit Descending Behaviour in bwtree_index.h
   */
-  void ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
+  bool ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
     uint32_t limit) {
 
     root_latch.LockExclusive();
 
     if(root == NULL) {
       root_latch.Unlock();
-      return;
+      return true;
     }
 
     BaseNode * current_node = root;
+    BaseNode * parent = NULL;
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch.Unlock();
+    /*
+      Locking Code End
+    */
 
     // Traversing Down to the right leaf node
     while(current_node->GetType() != NodeType::LeafType) {
@@ -1680,11 +1735,23 @@ class BPlusTree : public BPlusTreeBase {
         auto index_pointer = node->FindLocation(index_high_key, this);
         // Thus we have to go in the left side of location which will be the
         // pointer of the previous location.
+
+        // set parent for crabbing
+        parent = node;
         if(index_pointer != node->Begin()) {
           index_pointer -= 1;
           current_node = index_pointer->second;
         }
         else current_node = node->GetLowKeyPair().second;
+
+        /*
+        Locking Code
+        */
+        current_node->GetNodeSharedLatch();
+        parent->ReleaseNodeLatch();
+        /*
+        Locking Code End
+        */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -1696,10 +1763,17 @@ class BPlusTree : public BPlusTreeBase {
       // }
     } else {
       if(node->GetLowKeyPair().second == NULL) {
-        root_latch.Unlock();
-        return;
+        current_node->ReleaseNodeLatch();
+        return true;
       } else {
+        parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
         element_p = node->End() - 1;
       }
     }
@@ -1715,13 +1789,21 @@ class BPlusTree : public BPlusTreeBase {
 
       element_p--;
       if(element_p == node->Begin() - 1) {
+        parent = node;
         if(node->GetLowKeyPair().second == NULL) break;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
         element_p = node->End() - 1;
       }
-    } 
+    }
 
-    root_latch.Unlock();
+    current_node->ReleaseNodeLatch();
+    return true;
   }
 
   bool ReleaseAllLocks(std::vector<BaseNode *> &node_list, bool got_root_latch) {
