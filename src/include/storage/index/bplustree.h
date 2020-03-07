@@ -540,7 +540,12 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * ReleaseNodeLatch() - Release the lock to the current node
      */
-    void ReleaseNodeLatch() { metadata.node_latch_.Unlock(); }            
+    void ReleaseNodeLatch() { metadata.node_latch_.Unlock(); }
+
+    /*
+     * GetLatchPointer() - Get the Latch Pointer of current node's latch
+     */
+    SharedLatch * GetLatchPointer() { return &metadata.node_latch_; }             
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
@@ -1865,8 +1870,24 @@ class BPlusTree : public BPlusTreeBase {
         // node_right = splitted
         // splitted_left = node
         if (node->GetElasticHighKeyPair()->second != NULL) {
+          /*
+            Locking Code
+          */
+          node->GetElasticHighKeyPair()->second->GetNodeExclusiveLatch();
+          /*
+            Locking Code End
+          */
+
           auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
           node_next->GetElasticLowKeyPair()->second = splitted_node;
+
+          /*
+            Locking Code
+          */
+          node->GetElasticHighKeyPair()->second->ReleaseNodeLatch();
+          /*
+            Locking Code End
+          */
         }
         splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
         node->GetElasticHighKeyPair()->second = splitted_node;
@@ -2173,16 +2194,29 @@ class BPlusTree : public BPlusTreeBase {
     return;
   }
 
+  /* RelaseLastLocksDelete - Releases the node's latch and pops it from the list*/
+  void RelaseLastLocksDelete(std::vector<SharedLatch *> * lock_list) {
+    if(lock_list->size() > 0) {
+      (*lock_list->rbegin())->Unlock();
+      lock_list->pop_back();
+    }
+  }
+
   /*
   Delete with Lock
   Takes a coarse grained lock and calls the delete function
   */
   bool DeleteWithLock(const KeyElementPair &element) {
+
+    std::vector<SharedLatch *> lock_list;
+
+
     root_latch.LockExclusive();
-    bool is_deleted = Delete(root, element);
-    root_latch.Unlock();
+    lock_list.push_back(&root_latch);
+    bool is_deleted = Delete(root, element, &lock_list);
+    RelaseLastLocksDelete(&lock_list);
     return is_deleted;
-  } 
+  }
 
   /*
    * Delete() - Remove a key-value pair from the tree
@@ -2191,11 +2225,42 @@ class BPlusTree : public BPlusTreeBase {
    * exist. Return true if delete succeeds
    *
    */
-  bool Delete(BaseNode* current_node, const KeyElementPair &element) {
+  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<SharedLatch *> * lock_list) {
     // If tree is empty, return false
     if (current_node == NULL) {
       return false;
     }
+
+    /*
+      Locking Code
+    */
+    current_node->GetNodeExclusiveLatch();
+
+    bool condition_for_underflow = true;
+    if(current_node == root && current_node->GetSize() > 1) {
+      condition_for_underflow = false;
+    }
+    if(current_node != root && current_node->GetType() == NodeType::InnerType
+      && current_node->GetSize() > GetInnerNodeSizeLowerThreshold()) {
+      condition_for_underflow = false;
+    }
+    if(current_node != root && current_node->GetType() == NodeType::LeafType
+      && current_node->GetSize() > GetLeafNodeSizeLowerThreshold()) {
+      condition_for_underflow = false;
+    }
+
+    if(!condition_for_underflow) {
+      while(!lock_list.empty()) {
+        (*lock_list->rbegin())->Unlock();
+        lock_list->pop_back();
+      }
+    }
+
+    lock_list->push_back(current_node->GetLatchPointer());
+    /*
+      Locking Code End
+    */
+
 
     // If delete called on leaf node, just perform deletion
     // Else, call delete on child and check if child becomes underfull
@@ -2221,10 +2286,20 @@ class BPlusTree : public BPlusTreeBase {
 
           /*Not Found - Return false*/
           if(!element_present) {
+
+            /*Locking Code*/
+            RelaseLastLocksDelete(lock_list);
+            /*Locking Code End*/
+
             return false;
           }
 
           if(leaf_position->second->size() > 0) {
+
+            /*Locking Code*/
+            RelaseLastLocksDelete(lock_list);
+            /*Locking Code End*/
+
             return true;
           }
 
@@ -2238,9 +2313,15 @@ class BPlusTree : public BPlusTreeBase {
           }
           return is_deleted;
         } else {
+          /*Locking Code*/
+          RelaseLastLocksDelete(lock_list);
+          /*Locking Code End*/
           return false;
         }
       } else {
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
         return false;
       }
     } else {
@@ -2260,22 +2341,39 @@ class BPlusTree : public BPlusTreeBase {
 
       // Now perform any rebalancing or merge on child if it becomes underfull
       if (is_deleted) {
-        if (child_pointer->GetType() == NodeType:: LeafType) {
-          DeleteRebalance<KeyValuePair>(node, child_pointer, 
-            index, GetLeafNodeSizeLowerThreshold());
-        } else {
-          DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
-            index, GetInnerNodeSizeLowerThreshold());
+        if(lock_list->size() > 0) {
+          if (child_pointer->GetType() == NodeType:: LeafType) {
+            DeleteRebalance<KeyValuePair>(node, child_pointer, 
+              index, GetLeafNodeSizeLowerThreshold());
+          } else {
+            DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
+              index, GetInnerNodeSizeLowerThreshold());
+          }
         }
+
 
         // Check if this node is root and if its size becomes 0
         if (node->GetSize() == 0) {
           root = current_node->GetLowKeyPair().second;
+
+          /*Locking Code*/
+          RelaseLastLocksDelete(lock_list);
+          /*Locking Code End*/          
+
           node->FreeElasticNode();
+          return true;
         }
+
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
 
         return true;
       } else {
+
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
         return false;
       }
     }
