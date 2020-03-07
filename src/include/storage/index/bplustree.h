@@ -950,7 +950,7 @@ class BPlusTree : public BPlusTreeBase {
     Returns the list of values of the key from leaf if found
     Returns null if not found
   */
-  void FindValueOfKey(KeyType key, std::vector<ValueType> &result) {
+  void FindValueOfKey(KeyType key, std::vector<ValueType>* result) {
     common::SpinLatch::ScopedSpinLatch guard(&root_latch_);
 
     if (root_ == nullptr) {
@@ -980,7 +980,7 @@ class BPlusTree : public BPlusTreeBase {
       if (KeyCmpEqual(element_p->first, key)) {
         auto itr_list = element_p->second->begin();
         while (itr_list != element_p->second->end()) {
-          result.push_back(*itr_list);
+          (*result).push_back(*itr_list);
           itr_list++;
         }
         return;
@@ -1084,7 +1084,7 @@ class BPlusTree : public BPlusTreeBase {
   the size of each node.
   Also erases all keys that are found in the tree from the input set
   */
-  bool StructuralIntegrityVerification(KeyType low_key, KeyType high_key, std::set<KeyType> &keys,
+  bool StructuralIntegrityVerification(KeyType low_key, KeyType high_key, std::set<KeyType>* keys,
                                        BaseNode *current_node) {
     bool return_answer = true;
     if (current_node->GetType() == NodeType::LeafType) {
@@ -1100,7 +1100,7 @@ class BPlusTree : public BPlusTreeBase {
             return false;
           }
         }
-        keys.erase(element_p->first);
+        (*keys).erase(element_p->first);
       }
     } else {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
@@ -1132,8 +1132,8 @@ class BPlusTree : public BPlusTreeBase {
     sorted key set for their order. Verifies if a full scan (ascending) using the siblings
     is correct or not.
   */
-  bool SiblingForwardCheck(std::set<KeyType> &keys) {
-    int key = *keys.begin();
+  bool SiblingForwardCheck(std::set<KeyType>* keys) {
+    int key = *(*keys).begin();
     if (root_ == nullptr) {
       return false;
     }
@@ -1157,7 +1157,7 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    auto itr = keys.begin();
+    auto itr = (*keys).begin();
     while (node != nullptr) {
       // iterate over all the values in the leaf node checking with the key set
       for (KeyValuePair *element_p = node->Begin(); element_p != node->End(); element_p++) {
@@ -1179,8 +1179,8 @@ class BPlusTree : public BPlusTreeBase {
     sorted key set for their order. Verifies if a full scan (descending) using the siblings
     is correct or not.
   */
-  bool SiblingBackwardCheck(std::set<KeyType> &keys) {
-    int key = *keys.rbegin();
+  bool SiblingBackwardCheck(std::set<KeyType>* keys) {
+    int key = *(*keys).rbegin();
     if (root_ == nullptr) {
       return false;
     }
@@ -1204,7 +1204,7 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    auto itr = keys.rbegin();
+    auto itr = (*keys).rbegin();
     while (node != nullptr) {
       // iterate over all the values in the leaf node checking with the key set
       for (KeyValuePair *element_p = node->End() - 1; element_p != node->REnd(); element_p--) {
@@ -1225,13 +1225,13 @@ class BPlusTree : public BPlusTreeBase {
    * check if the values_list in the tree have the same values as the map given
    * in the function.
    */
-  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::vector<ValueType>> &keys_values) {
-    auto itr = keys_values.begin();
-    for (; itr != keys_values.end(); itr++) {
+  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::vector<ValueType>>* keys_values) {
+    auto itr = (*keys_values).begin();
+    for (; itr != (*keys_values).end(); itr++) {
       KeyType k = itr->first;
-      std::vector<ValueType> values = keys_values[k];
+      std::vector<ValueType> values = (*keys_values)[k];
       std::vector<ValueType> result;
-      FindValueOfKey(k, result);
+      FindValueOfKey(k, &result);
       if (result.empty()) {
         return false;
       }
@@ -1255,11 +1255,11 @@ class BPlusTree : public BPlusTreeBase {
    * transaction in insert unique. The check ensures that the values list
    * in the B+ tree also have the same keys and the same order.
    */
-  bool DuplicateKeyValueUniqueInsertCheck(std::unordered_map<KeyType, std::vector<ValueType>> &keys_values) {
-    auto itr = keys_values.begin();
-    for (; itr != keys_values.end(); itr++) {
+  bool DuplicateKeyValueUniqueInsertCheck(std::unordered_map<KeyType, std::vector<ValueType>>* keys_values) {
+    auto itr = (*keys_values).begin();
+    for (; itr != (*keys_values).end(); itr++) {
       KeyType k = itr->first;
-      std::vector<ValueType> values = keys_values[k];
+      std::vector<ValueType> values = (*keys_values)[k];
       std::list<ValueType> *values_list_p = FindValueOfKey(k);
       if (values_list_p == NULL) {
         return false;
