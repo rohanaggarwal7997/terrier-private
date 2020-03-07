@@ -50,10 +50,8 @@ class BPlusTreeIndex final : public Index {
                    "This Insert is designed for secondary indexes with no uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    
-    auto predicate = [txn](const TupleSlot slot) -> bool {
-      return false;
-    };
+
+    auto predicate = [](const TupleSlot slot) -> bool { return false; };
 
     const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
 
@@ -88,7 +86,6 @@ class BPlusTreeIndex final : public Index {
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
     const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
-;
 
     // TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 
@@ -141,11 +138,10 @@ class BPlusTreeIndex final : public Index {
 
     // Perform lookup in BPlusTree
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->FindValueOfKey(index_key, results);
+    bplustree_->FindValueOfKey(index_key, &results);
 
     // Avoid resizing our value_list, even if it means over-provisioning
     value_list->reserve(results.size());
-
 
     // Perform visibility check on result
     for (const auto &result : results) {
