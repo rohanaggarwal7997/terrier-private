@@ -545,7 +545,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * GetLatchPointer() - Get the Latch Pointer of current node's latch
      */
-    common::SharedLatch * GetLatchPointer() { return &metadata.node_latch_; }             
+    common::SharedLatch * GetLatchPointer() { return &(metadata.node_latch_); }             
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
@@ -2381,14 +2381,13 @@ class BPlusTree : public BPlusTreeBase {
 
     // If delete called on leaf node, just perform deletion
     // Else, call delete on child and check if child becomes underfull
-    if (current_node->GetType() == NodeType:: LeafType) {
+    if (current_node->GetType() == NodeType::LeafType) {
       // Leaf Node case => delete element
       auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
       auto leaf_position = node->FindLocation(element.first, this);
       if (leaf_position != node->Begin()) {
         leaf_position -= 1;
         if (KeyCmpEqual(leaf_position->first, element.first)) {
-
           bool element_present = false;
           auto itr_list = (leaf_position)->second->begin();
           while(itr_list != (leaf_position)->second->end()) {
@@ -2403,7 +2402,6 @@ class BPlusTree : public BPlusTreeBase {
 
           /*Not Found - Return false*/
           if(!element_present) {
-
             /*Locking Code*/
             RelaseLastLocksDelete(lock_list);
             /*Locking Code End*/
@@ -2412,7 +2410,6 @@ class BPlusTree : public BPlusTreeBase {
           }
 
           if(leaf_position->second->size() > 0) {
-
             /*Locking Code*/
             RelaseLastLocksDelete(lock_list);
             /*Locking Code End*/
@@ -2428,6 +2425,11 @@ class BPlusTree : public BPlusTreeBase {
             node->FreeElasticNode(); /*Important - we need to free node*/
             root = NULL;
           }
+
+          /*Locking Code*/
+          RelaseLastLocksDelete(lock_list);
+          /*Locking Code End*/
+
           return is_deleted;
         } else {
           /*Locking Code*/
