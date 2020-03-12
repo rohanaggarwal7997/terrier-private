@@ -6,6 +6,7 @@
 #include <queue>
 #include <set>
 #include <list>
+#include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -416,7 +417,7 @@ class BPlusTree : public BPlusTreeBase {
     int item_count;
 
     // Latch for each node
-    common::SharedLatch node_latch_;
+    std::shared_mutex node_latch_;
 
     /*
      * Constructor
@@ -530,22 +531,22 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * GetNodeExclusiveLatch() - Obtain the exclusive lock to the current node
      */
-    void GetNodeExclusiveLatch() { metadata.node_latch_.LockExclusive(); }
+    void GetNodeExclusiveLatch() { metadata.node_latch_.lock(); }
 
     /*
      * GetNodeSharedLatch() - Obtain the Shared lock to the current node
      */
-    void GetNodeSharedLatch() { metadata.node_latch_.LockShared(); }
+    void GetNodeSharedLatch() { metadata.node_latch_.lock_shared(); }
 
     /*
      * ReleaseNodeLatch() - Release the lock to the current node
      */
-    void ReleaseNodeLatch() { metadata.node_latch_.Unlock(); }
+    void ReleaseNodeLatch() { metadata.node_latch_.unlock(); }
 
     /*
      * GetLatchPointer() - Get the Latch Pointer of current node's latch
      */
-    common::SharedLatch * GetLatchPointer() { return &(metadata.node_latch_); }             
+    std::shared_mutex * GetLatchPointer() { return &(metadata.node_latch_); }             
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
@@ -1003,7 +1004,7 @@ class BPlusTree : public BPlusTreeBase {
 
   private:
   BaseNode * root;
-  common::SharedLatch root_latch;
+  std::shared_mutex root_latch;
 
   public:
 
@@ -1068,10 +1069,10 @@ class BPlusTree : public BPlusTreeBase {
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
 
-    root_latch.LockShared();
+    root_latch.lock_shared();
 
     if(root == NULL) {
-      root_latch.Unlock();
+      root_latch.unlock();
       return;
     }
 
@@ -1082,7 +1083,7 @@ class BPlusTree : public BPlusTreeBase {
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.Unlock();
+    root_latch.unlock();
     /*
       Locking Code End
     */
@@ -1445,7 +1446,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   size_t GetHeapUsage() {
 
-    root_latch.LockExclusive();
+    root_latch.lock();
     if(root == NULL) return 0;
 
     std::queue<BaseNode *> bfs_queue;
@@ -1499,10 +1500,10 @@ class BPlusTree : public BPlusTreeBase {
   void ScanAscending(KeyType index_low_key, KeyType index_high_key, bool low_key_exists, uint32_t num_attrs,
     bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
     
-    root_latch.LockExclusive();
+    root_latch.lock();
 
     if(root == NULL) {
-      root_latch.Unlock();
+      root_latch.unlock();
       return;
     }
 
@@ -1559,7 +1560,7 @@ class BPlusTree : public BPlusTreeBase {
       }
     }
 
-    root_latch.Unlock();
+    root_latch.unlock();
 
     return;
   }
@@ -1569,10 +1570,10 @@ class BPlusTree : public BPlusTreeBase {
   */
   void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
-    root_latch.LockExclusive();
+    root_latch.lock();
 
     if(root == NULL) {
-      root_latch.Unlock();
+      root_latch.unlock();
       return;
     }
 
@@ -1603,7 +1604,7 @@ class BPlusTree : public BPlusTreeBase {
       // }
     } else {
       if(node->GetLowKeyPair().second == NULL) {
-        root_latch.Unlock();
+        root_latch.unlock();
         return;
       } else {
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
@@ -1628,7 +1629,7 @@ class BPlusTree : public BPlusTreeBase {
       }
     } 
 
-    root_latch.Unlock();
+    root_latch.unlock();
   }
 
   /*
@@ -1637,10 +1638,10 @@ class BPlusTree : public BPlusTreeBase {
   void ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
     uint32_t limit) {
 
-    root_latch.LockExclusive();
+    root_latch.lock();
 
     if(root == NULL) {
-      root_latch.Unlock();
+      root_latch.unlock();
       return;
     }
 
@@ -1671,7 +1672,7 @@ class BPlusTree : public BPlusTreeBase {
       // }
     } else {
       if(node->GetLowKeyPair().second == NULL) {
-        root_latch.Unlock();
+        root_latch.unlock();
         return;
       } else {
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
@@ -1696,7 +1697,7 @@ class BPlusTree : public BPlusTreeBase {
       }
     } 
 
-    root_latch.Unlock();
+    root_latch.unlock();
   }
 
   bool ReleaseAllLocks(std::vector<BaseNode *> &node_list, bool got_root_latch) {
@@ -1706,7 +1707,7 @@ class BPlusTree : public BPlusTreeBase {
     }
     if(got_root_latch) {
       got_root_latch = false;
-      root_latch.Unlock();
+      root_latch.unlock();
     }
     return got_root_latch;
   }
@@ -1723,7 +1724,7 @@ class BPlusTree : public BPlusTreeBase {
   bool Insert(const KeyElementPair element, std::function<bool(const ValueType)> predicate) {
     /* If root is NULL then we make a Leaf Node.
      */
-    root_latch.LockExclusive();
+    root_latch.lock();
     bool got_root_latch = true;
 
     if (root == NULL) {
@@ -1953,7 +1954,7 @@ class BPlusTree : public BPlusTreeBase {
 
     if(got_root_latch) {
       got_root_latch = false;
-      root_latch.Unlock();
+      root_latch.unlock();
     }
 
     return true;
@@ -2306,9 +2307,9 @@ class BPlusTree : public BPlusTreeBase {
   }
 
   /* RelaseLastLocksDelete - Releases the node's latch and pops it from the list*/
-  void RelaseLastLocksDelete(std::vector<common::SharedLatch *> * lock_list) {
+  void RelaseLastLocksDelete(std::vector<std::shared_mutex *> * lock_list) {
     if(lock_list->size() > 0) {
-      (*lock_list->rbegin())->Unlock();
+      (*lock_list->rbegin())->unlock();
       lock_list->pop_back();
     }
   }
@@ -2319,10 +2320,10 @@ class BPlusTree : public BPlusTreeBase {
   */
   bool DeleteWithLock(const KeyElementPair &element) {
 
-    std::vector<common::SharedLatch *> lock_list;
+    std::vector<std::shared_mutex *> lock_list;
 
 
-    root_latch.LockExclusive();
+    root_latch.lock();
     lock_list.push_back(&root_latch);
     bool is_deleted = Delete(root, element, &lock_list);
     RelaseLastLocksDelete(&lock_list);
@@ -2336,7 +2337,7 @@ class BPlusTree : public BPlusTreeBase {
    * exist. Return true if delete succeeds
    *
    */
-  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<common::SharedLatch *> * lock_list) {
+  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<std::shared_mutex *> * lock_list) {
     // If tree is empty, return false
     if (current_node == NULL) {
       return false;
@@ -2368,7 +2369,7 @@ class BPlusTree : public BPlusTreeBase {
 
     if(!condition_for_underflow) {
       while(!lock_list->empty()) {
-        (*lock_list->rbegin())->Unlock();
+        (*lock_list->rbegin())->unlock();
         lock_list->pop_back();
       }
     }
