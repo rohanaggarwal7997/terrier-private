@@ -1068,7 +1068,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
 
-    root_latch.LockShared();
+    root_latch.LockExclusive();
 
     if(root == NULL) {
       root_latch.Unlock();
@@ -1081,7 +1081,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
         Locking Code
     */
-    current_node->GetNodeSharedLatch();
+    current_node->GetNodeExclusiveLatch();
     root_latch.Unlock();
     /*
       Locking Code End
@@ -1107,7 +1107,7 @@ class BPlusTree : public BPlusTreeBase {
       /*
         Locking Code
       */
-      current_node->GetNodeSharedLatch();
+      current_node->GetNodeExclusiveLatch();
       parent->ReleaseNodeLatch();
       /*
         Locking Code End
