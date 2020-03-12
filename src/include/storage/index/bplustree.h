@@ -1525,6 +1525,9 @@ class BPlusTree : public BPlusTreeBase {
     // Traversing Down to the correct leaf node
     while(current_node->GetType() != NodeType::LeafType) {
 
+      // Set parent for releasing the lock
+      parent = current_node;
+
       if(low_key_exists) {
         auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
         // Note that Find Location returns the location of first element
@@ -1533,8 +1536,6 @@ class BPlusTree : public BPlusTreeBase {
         // Thus we have to go in the left side of location which will be the
         // pointer of the previous location.
 
-        // Set parent for releasing the lock
-        parent = current_node;
         if(index_pointer != node->Begin()) {
           index_pointer -= 1;
           current_node = index_pointer->second;
@@ -1783,7 +1784,7 @@ class BPlusTree : public BPlusTreeBase {
       auto itr_list = element_p->second->begin();
       while(itr_list != element_p->second->end()) {
         value_list->push_back(*itr_list);
-        if(!(value_list->size() < limit)) break;
+        if(value_list->size() >= limit) break;
         itr_list++;
       }
 
