@@ -1883,6 +1883,8 @@ class BPlusTree : public BPlusTreeBase {
         /*
           Locking Code End
         */
+      } else {
+        delete value_list;
       }
       // Otherwise you split the node
       // Optimistic approach failed
