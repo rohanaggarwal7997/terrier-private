@@ -1521,7 +1521,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
         Locking Code
     */
-    current_node->GetNodeSharedLatch();
+    current_node->GetNodeExclusiveLatch();
     root_latch.Unlock();
     /*
       Locking Code End
@@ -1552,7 +1552,7 @@ class BPlusTree : public BPlusTreeBase {
       /*
         Locking Code
       */
-      current_node->GetNodeSharedLatch();
+      current_node->GetNodeExclusiveLatch();
       parent->ReleaseNodeLatch();
       /*
         Locking Code End
@@ -1591,7 +1591,7 @@ class BPlusTree : public BPlusTreeBase {
         /*
         Locking Code
         */
-        current_node->GetNodeSharedLatch();
+        current_node->GetNodeExclusiveLatch();
         parent->ReleaseNodeLatch();
         /*
           Locking Code End
@@ -1622,7 +1622,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
         Locking Code
     */
-    current_node->GetNodeSharedLatch();
+    current_node->GetNodeExclusiveLatch();
     root_latch.Unlock();
     /*
       Locking Code End
@@ -1649,7 +1649,7 @@ class BPlusTree : public BPlusTreeBase {
         /*
         Locking Code
         */
-        current_node->GetNodeSharedLatch();
+        current_node->GetNodeExclusiveLatch();
         parent->ReleaseNodeLatch();
         /*
         Locking Code End
@@ -1671,7 +1671,7 @@ class BPlusTree : public BPlusTreeBase {
         parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
         current_node = node;
-        if (!(current_node->TrySharedLock())) {
+        if (!(current_node->TryExclusiveLock())) {
           parent->ReleaseNodeLatch();
           return false;
         }
@@ -1695,7 +1695,7 @@ class BPlusTree : public BPlusTreeBase {
         if(node->GetLowKeyPair().second == NULL) break;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
         current_node = node;
-        if (!(current_node->TrySharedLock())) {
+        if (!(current_node->TryExclusiveLock())) {
           parent->ReleaseNodeLatch();
           return false;
         }
@@ -1726,7 +1726,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
         Locking Code
     */
-    current_node->GetNodeSharedLatch();
+    current_node->GetNodeExclusiveLatch();
     root_latch.Unlock();
     /*
       Locking Code End
@@ -1753,7 +1753,7 @@ class BPlusTree : public BPlusTreeBase {
         /*
         Locking Code
         */
-        current_node->GetNodeSharedLatch();
+        current_node->GetNodeExclusiveLatch();
         parent->ReleaseNodeLatch();
         /*
         Locking Code End
@@ -1775,7 +1775,7 @@ class BPlusTree : public BPlusTreeBase {
         parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
         current_node = node;
-        if (!(current_node->TrySharedLock())) {
+        if (!(current_node->TryExclusiveLock())) {
           parent->ReleaseNodeLatch();
           return false;
         }
@@ -1799,7 +1799,7 @@ class BPlusTree : public BPlusTreeBase {
         if(node->GetLowKeyPair().second == NULL) break;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
         current_node = node;
-        if (!(current_node->TrySharedLock())) {
+        if (!(current_node->TryExclusiveLock())) {
           parent->ReleaseNodeLatch();
           return false;
         }
