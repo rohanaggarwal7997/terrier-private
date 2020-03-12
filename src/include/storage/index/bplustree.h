@@ -1510,7 +1510,7 @@ class BPlusTree : public BPlusTreeBase {
   void ScanAscending(KeyType index_low_key, KeyType index_high_key, bool low_key_exists, uint32_t num_attrs,
     bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
     
-    root_latch.lock();
+    root_latch.lock_shared();
 
     if(root == NULL) {
       root_latch.unlock();
@@ -1611,7 +1611,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   bool ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
-    root_latch.lock();
+    root_latch.lock_shared();
 
     if(root == NULL) {
       root_latch.unlock();
@@ -1715,7 +1715,7 @@ class BPlusTree : public BPlusTreeBase {
   bool ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
     uint32_t limit) {
 
-    root_latch.lock();
+    root_latch.lock_shared();
 
     if(root == NULL) {
       root_latch.unlock();
