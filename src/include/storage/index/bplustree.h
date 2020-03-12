@@ -1722,6 +1722,199 @@ class BPlusTree : public BPlusTreeBase {
   */
 
   bool Insert(const KeyElementPair element, std::function<bool(const ValueType)> predicate) {
+    /*
+     ****************************
+      First try optimistic insert
+     **************************** 
+    */
+    /* If root is NULL then we make a Leaf Node.
+     */
+    root_latch.lock_shared();
+
+    if (root == NULL) {
+      KeyNodePointerPair p1, p2;
+      p1.first = element.first;
+      p2.first = element.first;
+      p1.second = NULL;
+      p2.second = NULL;
+
+      // First release root's shared latch and get exclusive latch on tree
+      root_latch.unlock();
+      root_latch.lock();
+
+      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
+                                            leaf_node_size_upper_threshold_, p1, p2);
+
+      // First release root's exclusive latch and get shared latch on tree
+      root_latch.unlock();
+      root_latch.lock_shared();
+    }
+    // beyond this point we'll have shared_lock on tree lock
+
+    BaseNode *current_node = root;
+    BaseNode *parent_node;
+
+
+    /*
+      Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    /*
+      Locking Code End
+    */
+
+    // Traversing Down and maintaining a stack of pointers
+    while (current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+
+      /*
+        Locking Code
+        Release parent's shared lock
+      */
+      if (parent_node != nullptr) {
+        parent_node->ReleaseNodeLatch();
+      } else {
+        root_latch.unlock();
+      }
+      // if(node->GetSize() < node->GetItemCount()) {
+      //   got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+      // } 
+      /*
+        Locking Code End
+      */
+
+
+
+
+      // node_list.push_back(current_node);
+      
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(element.first, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if (index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        parent_node = current_node;
+        current_node = index_pointer->second;
+      } else {
+        parent_node = current_node;
+        current_node = node->GetLowKeyPair().second;
+      }
+
+
+      /*
+        Locking Code
+        Get current node's shared lock
+      */
+      current_node->GetNodeSharedLatch();
+      /*
+        Locking Code End
+      */
+    }
+
+    // Now we try insertion into the found leaf node
+    // only if insertion without splitting is possible
+
+    /*
+      Locking Code
+      Get current node's exclusive lock and free parent
+    */
+    current_node->ReleaseNodeLatch();
+    current_node->GetNodeExclusiveLatch();
+    if (parent_node != nullptr) {
+      parent_node->ReleaseNodeLatch();
+    } else {
+      root_latch.unlock();
+    }
+    /*
+      Locking Code End
+      Beyond this we only have exclusive latch on the current_node
+    */
+
+
+
+    bool finished_insertion = false;
+    // We maintain the element that we have to recursively insert up.
+    // This is the element that has to be inserted into the inner nodes.
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+
+    auto location_greater_key_leaf = node->FindLocation(element.first, this);
+    if (location_greater_key_leaf != node->Begin()) {
+      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+        // Key present in tree => insert into value list
+        auto itr_list = (location_greater_key_leaf - 1)->second->begin();
+        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if(ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
+
+            /*
+              Release all locks if the value is already present
+            */
+            current_node->ReleaseNodeLatch();
+            /*
+              Locking Code End
+  
+            */
+            return false;
+          }
+          itr_list++;
+        }
+        (location_greater_key_leaf - 1)->second->push_back(element.second);
+
+        /*
+        Locking Code
+        */
+        current_node->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
+
+        finished_insertion = true;
+      }  
+    } 
+    
+    // Insertion not done yet as key is not present 
+    if(!finished_insertion) {
+      auto value_list = new std::list<ValueType>();
+      value_list->push_back(element.second);
+      KeyValuePair key_list_value;
+      key_list_value.first = element.first;
+      key_list_value.second = value_list;
+      if (node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this))) {
+        // If you can directly insert in the leaf - Insertion is over
+        finished_insertion = true;
+        /*
+        Locking Code
+        */
+        current_node->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
+      }
+      // Otherwise you split the node
+      // Optimistic approach failed
+    }
+
+    if (finished_insertion){
+      return true;
+    } else {
+      // Pessimistic approach failed
+      /*
+      Locking Code
+      */
+      current_node->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
+    } 
+
+    /*
+     ****************************************
+      if not successful -> pessimistic insert
+     **************************************** 
+    */
+
     /* If root is NULL then we make a Leaf Node.
      */
     root_latch.lock();
@@ -1738,7 +1931,7 @@ class BPlusTree : public BPlusTreeBase {
     }
 
 
-    BaseNode *current_node = root;
+    current_node = root;
 
 
     /*
@@ -1795,13 +1988,13 @@ class BPlusTree : public BPlusTreeBase {
 
 
 
-    bool finished_insertion = false;
+    finished_insertion = false;
     // We maintain the element that we have to recursively insert up.
     // This is the element that has to be inserted into the inner nodes.
     KeyNodePointerPair inner_node_element;
-    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
 
-    auto location_greater_key_leaf = node->FindLocation(element.first, this);
+    location_greater_key_leaf = node->FindLocation(element.first, this);
     if (location_greater_key_leaf != node->Begin()) {
       if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
 
