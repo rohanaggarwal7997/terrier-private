@@ -1729,7 +1729,7 @@ class BPlusTree : public BPlusTreeBase {
     */
     /* If root is NULL then we make a Leaf Node.
      */
-    root_latch.lock_shared();
+    root_latch.lock();
 
     if (root == NULL) {
       KeyNodePointerPair p1, p2;
@@ -1738,21 +1738,13 @@ class BPlusTree : public BPlusTreeBase {
       p1.second = NULL;
       p2.second = NULL;
 
-      // First release root's shared latch and get exclusive latch on tree
-      root_latch.unlock();
-      root_latch.lock();
-
       root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
                                             leaf_node_size_upper_threshold_, p1, p2);
-
-      // First release root's exclusive latch and get shared latch on tree
-      root_latch.unlock();
-      root_latch.lock_shared();
     }
-    // beyond this point we'll have shared_lock on tree lock
+    // beyond this point we'll have exclusive_lock on tree lock
 
     BaseNode *current_node = root;
-    BaseNode *parent_node;
+    BaseNode *parent_node = nullptr;
 
 
     /*
