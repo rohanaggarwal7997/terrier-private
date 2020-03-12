@@ -551,12 +551,12 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * TryExclusiveLock() - Try to get the exclusive lock
      */
-    bool TryExclusiveLock() { return metadata.node_latch_.TryExclusiveLock(); }
+    bool TryExclusiveLock() { return metadata.node_latch_.try_lock(); }
 
     /*
      * TrySharedLock() - Try to get the shared read lock
      */
-    bool TrySharedLock() { return metadata.node_latch_.TryLockShared(); }
+    bool TrySharedLock() { return metadata.node_latch_.try_lock_shared(); }
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
@@ -1624,7 +1624,7 @@ class BPlusTree : public BPlusTreeBase {
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.Unlock();
+    root_latch.unlock();
     /*
       Locking Code End
     */
@@ -1728,7 +1728,7 @@ class BPlusTree : public BPlusTreeBase {
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.Unlock();
+    root_latch.unlock();
     /*
       Locking Code End
     */
