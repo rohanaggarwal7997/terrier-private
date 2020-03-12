@@ -1045,7 +1045,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
 
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
 
     if(root == NULL) {
       return;
@@ -1142,6 +1142,9 @@ class BPlusTree : public BPlusTreeBase {
     Traverses Down the root in a BFS manner and frees all the nodes
   */
   void FreeTree() {
+
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
+    
     if(root == NULL) return;
     std::queue<BaseNode *> bfs_queue;
     std::queue<BaseNode *> all_nodes;
@@ -1396,7 +1399,7 @@ class BPlusTree : public BPlusTreeBase {
   size_t GetHeapUsage() {
 
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
     if(root == NULL) return 0;
 
     std::queue<BaseNode *> bfs_queue;
@@ -1451,7 +1454,7 @@ class BPlusTree : public BPlusTreeBase {
     bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
     
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
 
     if(root == NULL) {
       return;
@@ -1519,7 +1522,7 @@ class BPlusTree : public BPlusTreeBase {
   void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
 
     if(root == NULL) {
       return;
@@ -1583,7 +1586,7 @@ class BPlusTree : public BPlusTreeBase {
     uint32_t limit) {
 
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
 
     if(root == NULL) {
       return;
@@ -1651,7 +1654,7 @@ class BPlusTree : public BPlusTreeBase {
     /* If root is NULL then we make a Leaf Node.
      */
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
 
 
     if (root == NULL) {
@@ -2044,7 +2047,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   bool DeleteWithLock(const KeyElementPair &element) {
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch  guard(&(root_latch));
     return Delete(root, element);
   } 
 
