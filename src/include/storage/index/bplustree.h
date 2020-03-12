@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "common/spin_latch.h"
+#include "common/shared_latch.h"
 #include "storage/index/index.h"
 #include "storage/index/index_defs.h"
 
@@ -414,6 +415,9 @@ class BPlusTree : public BPlusTreeBase {
 
     // This counts the total number of items in the node
     int item_count;
+
+    // Latch for particular node
+    // common::SharedLatch node_latch_;
 
     /*
      * Constructor
@@ -866,14 +870,15 @@ class BPlusTree : public BPlusTreeBase {
       // after being returned
       auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType)];
       auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
-      elastic_node->SetLowKeyPair(elastic_node->GetElasticLowKeyPair());
-      elastic_node->SetHighKeyPair(elastic_node->GetElasticHighKeyPair());
-      elastic_node->SetItemCount(p_item_count);
-      elastic_node->SetType(p_type);
-      elastic_node->SetDepth(p_depth);
-      elastic_node->SetElasticLowKeyPair(p_low_key);
-      elastic_node->SetElasticHighKeyPair(p_high_key);
-      elastic_node->InitializeEnd();
+      // elastic_node->SetLowKeyPair(elastic_node->GetElasticLowKeyPair());
+      // elastic_node->SetHighKeyPair(elastic_node->GetElasticHighKeyPair());
+      // elastic_node->SetItemCount(p_item_count);
+      // elastic_node->SetType(p_type);
+      // elastic_node->SetDepth(p_depth);
+      // elastic_node->SetElasticLowKeyPair(p_low_key);
+      // elastic_node->SetElasticHighKeyPair(p_high_key);
+      // elastic_node->InitializeEnd();
+      new (elastic_node) ElasticNode{p_type, p_depth, p_item_count, p_low_key, p_high_key};
       return elastic_node;
     }
 
@@ -975,7 +980,7 @@ class BPlusTree : public BPlusTreeBase {
 
   private:
   BaseNode * root;
-  mutable common::SpinLatch root_latch;
+  mutable common::SharedLatch root_latch;
 
   public:
 
@@ -1040,7 +1045,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
 
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1390,7 +1395,8 @@ class BPlusTree : public BPlusTreeBase {
   */
   size_t GetHeapUsage() {
 
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
     if(root == NULL) return 0;
 
     std::queue<BaseNode *> bfs_queue;
@@ -1444,7 +1450,8 @@ class BPlusTree : public BPlusTreeBase {
   void ScanAscending(KeyType index_low_key, KeyType index_high_key, bool low_key_exists, uint32_t num_attrs,
     bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
     
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1511,7 +1518,8 @@ class BPlusTree : public BPlusTreeBase {
   */
   void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1574,7 +1582,8 @@ class BPlusTree : public BPlusTreeBase {
   void ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
     uint32_t limit) {
 
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1641,7 +1650,8 @@ class BPlusTree : public BPlusTreeBase {
   bool Insert(const KeyElementPair element, std::function<bool(const ValueType)> predicate) {
     /* If root is NULL then we make a Leaf Node.
      */
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
 
 
     if (root == NULL) {
@@ -2033,7 +2043,8 @@ class BPlusTree : public BPlusTreeBase {
   Takes a coarse grained lock and calls the delete function
   */
   bool DeleteWithLock(const KeyElementPair &element) {
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
     return Delete(root, element);
   } 
 
