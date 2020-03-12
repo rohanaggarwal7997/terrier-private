@@ -609,10 +609,10 @@ class BPlusTree : public BPlusTreeBase {
       Free elastic node
     */
     void FreeElasticNode() {
-      for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
-        // Manually calls destructor when the node is destroyed
-        element_p->~ElementType();
-      }
+      // for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
+      //   // Manually calls destructor when the node is destroyed
+      //   element_p->~ElementType();
+      // }
       ElasticNode *beginningAllocation = this;
       delete[] reinterpret_cast<char *>(beginningAllocation); 
     }
@@ -1045,7 +1045,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
 
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1396,7 +1396,7 @@ class BPlusTree : public BPlusTreeBase {
   size_t GetHeapUsage() {
 
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
     if(root == NULL) return 0;
 
     std::queue<BaseNode *> bfs_queue;
@@ -1451,7 +1451,7 @@ class BPlusTree : public BPlusTreeBase {
     bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
     
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1519,7 +1519,7 @@ class BPlusTree : public BPlusTreeBase {
   void ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
 
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1583,7 +1583,7 @@ class BPlusTree : public BPlusTreeBase {
     uint32_t limit) {
 
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
 
     if(root == NULL) {
       return;
@@ -1651,7 +1651,7 @@ class BPlusTree : public BPlusTreeBase {
     /* If root is NULL then we make a Leaf Node.
      */
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
 
 
     if (root == NULL) {
@@ -2044,7 +2044,7 @@ class BPlusTree : public BPlusTreeBase {
   */
   bool DeleteWithLock(const KeyElementPair &element) {
     // common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    common::SharedLatch::ScopedSharedLatch(&(this->root_latch));
+    common::SharedLatch::ScopedExclusiveLatch(&(this->root_latch));
     return Delete(root, element);
   } 
 
