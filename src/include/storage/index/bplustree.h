@@ -1137,6 +1137,9 @@ class BPlusTree : public BPlusTreeBase {
     Traverses Down the root in a BFS manner and frees all the nodes
   */
   void FreeTree() {
+    // Acquire lock for tree
+    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+
     if(root == NULL) return;
     std::queue<BaseNode *> bfs_queue;
     std::queue<BaseNode *> all_nodes;
@@ -1389,8 +1392,9 @@ class BPlusTree : public BPlusTreeBase {
   Returns current heap usage
   */
   size_t GetHeapUsage() {
-
+    // Acquire tree latch
     common::SpinLatch::ScopedSpinLatch guard(&root_latch);
+    
     if(root == NULL) return 0;
 
     std::queue<BaseNode *> bfs_queue;
