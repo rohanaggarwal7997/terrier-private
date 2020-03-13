@@ -605,10 +605,10 @@ class BPlusTree : public BPlusTreeBase {
       Free elastic node
     */
     void FreeElasticNode() {
-      for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
-        // Manually calls destructor when the node is destroyed
-        element_p->~ElementType();
-      }
+      // for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
+      //   // Manually calls destructor when the node is destroyed
+      //   element_p->~ElementType();
+      // }
       ElasticNode *beginningAllocation = this;
       delete[] reinterpret_cast<char *>(beginningAllocation); 
     }
@@ -2037,8 +2037,11 @@ class BPlusTree : public BPlusTreeBase {
   Takes a coarse grained lock and calls the delete function
   */
   bool DeleteWithLock(const KeyElementPair &element) {
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch);
-    return Delete(root, element);
+
+    root_latch.Lock();
+    bool delete_result = Delete(root, element);
+    root_latch.Unlock();
+    return delete_result;
   } 
 
   /*
@@ -2086,8 +2089,9 @@ class BPlusTree : public BPlusTreeBase {
           }
 
           /*If now the list is empty delete key-emptylist from the tree*/
-          delete leaf_position->second;
-          bool is_deleted = node->Erase(leaf_position - node->Begin());
+          // delete leaf_position->second;
+          // bool is_deleted = node->Erase(leaf_position - node->Begin());
+          bool is_deleted = true;
           if (is_deleted && node->GetSize() == 0) {
             // all elements of tree are now deleted
             node->FreeElasticNode(); /*Important - we need to free node*/
@@ -2105,25 +2109,25 @@ class BPlusTree : public BPlusTreeBase {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       auto child_position = node->FindLocation(element.first, this);
       BaseNode* child_pointer;
-      int index;
+      // int index;
       if (child_position != node->Begin()) {
         child_pointer = (child_position - 1)->second;
-        index = child_position - node->Begin() - 1;
+        // index = child_position - node->Begin() - 1;
       } else {
         child_pointer = node->GetLowKeyPair().second;
-        index = -1;
+        // index = -1;
       }
       bool is_deleted = Delete(child_pointer, element);
 
       // Now perform any rebalancing or merge on child if it becomes underfull
       if (is_deleted) {
-        if (child_pointer->GetType() == NodeType:: LeafType) {
-          DeleteRebalance<KeyValuePair>(node, child_pointer, 
-            index, GetLeafNodeSizeLowerThreshold());
-        } else {
-          DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
-            index, GetInnerNodeSizeLowerThreshold());
-        }
+        // if (child_pointer->GetType() == NodeType:: LeafType) {
+        //   DeleteRebalance<KeyValuePair>(node, child_pointer, 
+        //     index, GetLeafNodeSizeLowerThreshold());
+        // } else {
+        //   DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
+        //     index, GetInnerNodeSizeLowerThreshold());
+        // }
 
         // Check if this node is root and if its size becomes 0
         if (node->GetSize() == 0) {
