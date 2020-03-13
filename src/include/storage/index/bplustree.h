@@ -1484,6 +1484,12 @@ class BPlusTree : public BPlusTreeBase {
         if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
           element_p --;
         }
+        if(element_p == node->End()) {
+          if(node->GetHighKeyPair().second == NULL) return;
+          node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+          element_p = node->Begin();
+        }
+
       } 
     } else {
       element_p = node->Begin();
