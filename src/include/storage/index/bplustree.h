@@ -2619,10 +2619,185 @@ class BPlusTree : public BPlusTreeBase {
   Takes a coarse grained lock and calls the delete function
   */
   bool DeleteWithLock(const KeyElementPair &element) {
+    /*
+     ****************************
+      First try optimistic delete
+     **************************** 
+    */
+    /* If root is NULL then we make a Leaf Node.
+     */
+    root_latch.lock();
+
+    if (root == NULL) {
+      KeyNodePointerPair p1, p2;
+      p1.first = element.first;
+      p2.first = element.first;
+      p1.second = NULL;
+      p2.second = NULL;
+
+      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
+                                            leaf_node_size_upper_threshold_, p1, p2);
+    }
+    // beyond this point we'll have exclusive_lock on tree lock
+
+    BaseNode *current_node = root;
+    BaseNode *parent_node = nullptr;
+
+
+    /*
+      Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    /*
+      Locking Code End
+    */
+
+    // Traversing Down
+    while (current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+      /*
+        Locking Code
+        Release parent's shared lock
+      */
+      if (parent_node != nullptr) {
+        parent_node->ReleaseNodeLatch();
+      } else {
+        root_latch.unlock();
+      }
+      /*
+        Locking Code End
+      */
+      
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(element.first, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if (index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        parent_node = current_node;
+        current_node = index_pointer->second;
+      } else {
+        parent_node = current_node;
+        current_node = node->GetLowKeyPair().second;
+      }
+
+
+      /*
+        Locking Code
+        Get current node's shared lock
+      */
+      current_node->GetNodeSharedLatch();
+      /*
+        Locking Code End
+      */
+    }
+
+    // Now we try deletion from the found leaf node
+    // only if without sharing or merge is possible
+
+    /*
+      Locking Code
+      Get current node's exclusive lock and free parent
+    */
+    current_node->ReleaseNodeLatch();
+    current_node->GetNodeExclusiveLatch();
+    if (parent_node != nullptr) {
+      parent_node->ReleaseNodeLatch();
+    } else {
+      root_latch.unlock();
+    }
+    /*
+      Locking Code End
+      Beyond this we only have exclusive latch on the current_node
+    */
+
+
+
+    bool finished_deletion = false;
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    auto location_greater_key_leaf = node->FindLocation(element.first, this);
+    if (location_greater_key_leaf != node->Begin()) {
+      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+        // Key present in tree => check if value present & delete from value list
+        bool found_value = false;
+        auto itr_list = (location_greater_key_leaf - 1)->second->begin();
+        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if(ValueCmpEqual(*itr_list, element.second)) {
+            /*
+              Value fround => Delete element from list if won't trigger rebalance
+            */
+            found_value = true;
+            if (((location_greater_key_leaf - 1)->second->size() > 1) || 
+                (node->GetSize() > GetLeafNodeSizeLowerThreshold())) {
+              (location_greater_key_leaf - 1)->second->erase(itr_list);
+              finished_deletion = false;
+              break;
+            }
+          }
+          itr_list++;
+        }
+        
+        if (!found_value) {
+          // Value not in tree
+          /*
+            Release node lock after value not found to delete
+          */
+          current_node->ReleaseNodeLatch();
+          /*
+            Locking Code End
+          */
+
+          return false;
+        } if (found_value) {
+          if (finished_deletion) {
+            /*If now the list is empty delete key-emptylist from the tree*/
+            delete (location_greater_key_leaf - 1)->second;
+            bool is_deleted = node->Erase((location_greater_key_leaf - 1) - node->Begin());
+            
+            /*
+              Release node lock after delete
+            */
+            current_node->ReleaseNodeLatch();
+            /*
+              Locking Code End
+            */
+
+            return is_deleted;
+          } else {
+            // Need to continue with pessimistic
+            /*
+              Release node lock after delete
+            */
+            current_node->ReleaseNodeLatch();
+            /*
+              Locking Code End
+            */            
+          }
+        }
+      }  
+    } 
+
+    // Deletion not done yet as key is not present 
+    /*
+      Release node lock after key not found to delete
+    */
+    current_node->ReleaseNodeLatch();
+    /*
+      Locking Code End
+    */
+
+    return false;
+
+    /*
+     ****************************************
+      if not successful -> pessimistic delete
+     **************************************** 
+    */    
+
 
     std::vector<std::shared_mutex *> lock_list;
-
-
     root_latch.lock();
     lock_list.push_back(&root_latch);
     bool is_deleted = Delete(root, element, &lock_list);
