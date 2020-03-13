@@ -2732,7 +2732,7 @@ class BPlusTree : public BPlusTreeBase {
             if (((location_greater_key_leaf - 1)->second->size() > 1) || 
                 (node->GetSize() > GetLeafNodeSizeLowerThreshold())) {
               (location_greater_key_leaf - 1)->second->erase(itr_list);
-              finished_deletion = false;
+              finished_deletion = true;
               break;
             }
           }
@@ -2750,11 +2750,14 @@ class BPlusTree : public BPlusTreeBase {
           */
 
           return false;
-        } if (found_value) {
+        } else if (found_value) {
           if (finished_deletion) {
             /*If now the list is empty delete key-emptylist from the tree*/
-            delete (location_greater_key_leaf - 1)->second;
-            bool is_deleted = node->Erase((location_greater_key_leaf - 1) - node->Begin());
+            bool is_deleted = true;
+            if((location_greater_key_leaf - 1)->second->size() == 0) {
+              delete (location_greater_key_leaf - 1)->second;
+              is_deleted = node->Erase((location_greater_key_leaf - 1) - node->Begin());
+            }
             
             /*
               Release node lock after delete
@@ -2776,19 +2779,31 @@ class BPlusTree : public BPlusTreeBase {
             */            
           }
         }
-      }  
-    } 
+      } else {
+        // Deletion not done yet as key is not present 
+      /*
+        Release node lock after key not found to delete
+      */
+      current_node->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
 
-    // Deletion not done yet as key is not present 
-    /*
-      Release node lock after key not found to delete
-    */
-    current_node->ReleaseNodeLatch();
-    /*
-      Locking Code End
-    */
+      return false;        
+      } 
+    } else {
 
-    return false;
+      // Deletion not done yet as key is not present 
+      /*
+        Release node lock after key not found to delete
+      */
+      current_node->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
+
+      return false;
+    }
 
     /*
      ****************************************
