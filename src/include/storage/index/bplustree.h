@@ -2624,19 +2624,13 @@ class BPlusTree : public BPlusTreeBase {
       First try optimistic delete
      **************************** 
     */
-    /* If root is NULL then we make a Leaf Node.
+    /* If root is NULL then we return false.
      */
     root_latch.lock();
 
     if (root == NULL) {
-      KeyNodePointerPair p1, p2;
-      p1.first = element.first;
-      p2.first = element.first;
-      p1.second = NULL;
-      p2.second = NULL;
-
-      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
-                                            leaf_node_size_upper_threshold_, p1, p2);
+      root_latch.unlock();
+      return false;
     }
     // beyond this point we'll have exclusive_lock on tree lock
 
