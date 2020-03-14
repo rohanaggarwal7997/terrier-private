@@ -172,9 +172,15 @@ class BPlusTreeIndex final : public Index {
     if (low_key_exists) index_low_key.SetFromProjectedRow(*low_key, metadata_, num_attrs);
     if (high_key_exists) index_high_key.SetFromProjectedRow(*high_key, metadata_, num_attrs);
 
+    std::vector<TupleSlot> results;
+
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     bplustree_->ScanAscending(index_low_key, index_high_key, low_key_exists, num_attrs,
-    high_key_exists, limit, value_list, &metadata_);
+    high_key_exists, limit, &results, &metadata_);
+
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
+    }
   }
 
   void ScanDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
@@ -188,9 +194,15 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     bool scan_completed = false;
+    std::vector<TupleSlot> results;
+
     while(!scan_completed) {
-      value_list->clear();
-      scan_completed = bplustree_->ScanDescending(index_low_key, index_high_key, value_list);
+      results.clear();
+      scan_completed = bplustree_->ScanDescending(index_low_key, index_high_key, &results);
+    }
+
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
     }
   }
 
@@ -207,9 +219,14 @@ class BPlusTreeIndex final : public Index {
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     bool scan_completed = false;
+    std::vector<TupleSlot> results;
     while(!scan_completed) {
-      value_list->clear();
-      scan_completed = bplustree_->ScanLimitDescending(index_low_key, index_high_key, value_list, limit);
+      results.clear();
+      scan_completed = bplustree_->ScanLimitDescending(index_low_key, index_high_key, &results, limit);
+    }
+
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
     }
   }
 };

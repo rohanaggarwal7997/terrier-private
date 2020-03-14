@@ -1568,6 +1568,25 @@ class BPlusTree : public BPlusTreeBase {
         if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
           element_p --;
         }
+        if(element_p == node->End()) {
+          if(node->GetHighKeyPair().second == NULL) {
+            current_node->ReleaseNodeLatch();
+            return;
+          }
+          parent = node;
+          node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+          current_node = node;
+          /*
+          Locking Code
+          */
+          current_node->GetNodeSharedLatch();
+          parent->ReleaseNodeLatch();
+          /*
+            Locking Code End
+          */
+          element_p = node->Begin();
+        }
+
       } 
     } else {
       element_p = node->Begin();
