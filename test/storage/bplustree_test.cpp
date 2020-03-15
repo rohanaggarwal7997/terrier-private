@@ -8,6 +8,8 @@
 
 namespace terrier::storage::index {
 
+unsigned int globalseed = 9;
+
 struct BPlusTreeTests : public TerrierTest {};
 
 void BasicNodeInitializationInsertReadAndFreeTest() {
@@ -107,7 +109,7 @@ void InsertElementInNodeRandomTest() {
     BPlusTree<int, TupleSlot>::KeyNodePointerPair p1;
     p1.first = i;
     int k;
-    k = rand() % (node->GetSize() + 1);
+    k = rand_r(&globalseed) % (node->GetSize() + 1);
     while (positions.find(k) != positions.end()) k = (k + 1) % (node->GetSize() + 1);
     EXPECT_EQ(node->InsertElementIfPossible(p1, node->Begin() + k), true);
     positions[k] = i;
@@ -204,7 +206,7 @@ void FindLocationTest() {
 
   std::set<unsigned> s;
   while (node->GetSize() < node->GetItemCount()) {
-    int k = rand();
+    int k = rand_r(&globalseed);
     while (s.find(k) != s.end()) k++;
     s.insert(k);
     BPlusTree<int, TupleSlot>::KeyNodePointerPair p;
@@ -504,7 +506,7 @@ void LargeKeyRandomInsertSiblingSequenceTest() {
   std::set<int> keys;
   for (unsigned i = 0; i < 100000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500000;
+    int k = rand_r(&globalseed) % 500000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -529,7 +531,7 @@ void KeyRandomInsertAndDeleteSiblingSequenceTest() {
   std::set<int> keys;
   for (unsigned i = 0; i < 1000; i++) {
     BPlusTree<int, int>::KeyElementPair p1;
-    int k = rand() % 500000;
+    int k = rand_r(&globalseed) % 500000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -542,7 +544,7 @@ void KeyRandomInsertAndDeleteSiblingSequenceTest() {
 
   for (unsigned i = 0; i < 500; i++) {
     BPlusTree<int, int>::KeyElementPair p1;
-    unsigned key_index = rand() % keys.size();
+    unsigned key_index = rand_r(&globalseed) % keys.size();
     auto it = keys.begin();
     std::advance(it, key_index);
     int k = *it;
@@ -567,8 +569,8 @@ void DuplicateKeyValueInsertTest() {
   bplustree->SetLeafNodeSizeUpperThreshold(5);
   std::unordered_map<int, std::set<int>> keys_values;
   for (int i = 0; i < 100000; i++) {
-    int k = i % 1000;     // there will be 100 inserts for same key
-    int v = rand() % 50;  // expect one duplicate value per key
+    int k = i % 1000;                  // there will be 100 inserts for same key
+    int v = rand_r(&globalseed) % 50;  // expect one duplicate value per key
     if (keys_values.count(k) == 0) {
       std::set<int> value_list;
       value_list.insert(v);
@@ -596,8 +598,8 @@ void ScanKeyTest() {
   bplustree->SetLeafNodeSizeUpperThreshold(5);
   std::unordered_map<int, std::set<int>> keys_values;
   for (unsigned i = 0; i < 100000; i++) {
-    int k = rand() % 1000;
-    int v = rand() % 500000;
+    int k = rand_r(&globalseed) % 1000;
+    int v = rand_r(&globalseed) % 500000;
     int is_value_unique = 1;
     if (keys_values.count(k) == 0) {
       std::set<int> value_list;
@@ -726,7 +728,7 @@ void LargeKeyRandomInsertAndRetrievalTest() {
   std::set<int> keys;
   for (unsigned i = 0; i < 100000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500000;
+    int k = rand_r(&globalseed) % 500000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -753,7 +755,7 @@ void LargeKeyRandomInsertAndDeleteTest() {
   std::set<int> keys;
   for (unsigned i = 0; i < 100000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500000;
+    int k = rand_r(&globalseed) % 500000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -801,8 +803,8 @@ void DuplicateKeyDeleteTest() {
   std::map<int, std::set<int>> key_vals;
   for (int i = 0; i < 10000; i++) {
     BPlusTree<int, int>::KeyElementPair p1;
-    int k = i % 100;        // 100 different keys
-    int v = rand() % 5000;  // 100 values per key
+    int k = i % 100;                     // 100 different keys
+    int v = rand_r(&globalseed) % 5000;  // 100 values per key
     if (key_vals.count(k) == 0) {
       std::set<int> s;
       s.insert(v);
@@ -859,7 +861,7 @@ void StructuralIntegrityTestWithRandomInsert() {
   std::set<int> keys;
   for (unsigned i = 0; i < 100000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500000;
+    int k = rand_r(&globalseed) % 500000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -889,7 +891,7 @@ void StructuralIntegrityTestWithCornerCase() {
   std::set<int> keys;
   for (unsigned i = 0; i < 100; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500;
+    int k = rand_r(&globalseed) % 500;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -919,7 +921,7 @@ void StructuralIntegrityTestWithCornerCase2() {
   std::set<int> keys;
   for (unsigned i = 0; i < 100; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500;
+    int k = rand_r(&globalseed) % 500;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -949,7 +951,7 @@ void StructuralIntegrityTestWithRandomInsertAndDelete() {
   std::set<int> keys;
   for (unsigned i = 0; i < 15; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 500;
+    int k = rand_r(&globalseed) % 500;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -998,7 +1000,7 @@ void LargeStructuralIntegrityVerificationTest() {
   std::set<int> keys;
   for (unsigned i = 0; i < 1000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 5000;
+    int k = rand_r(&globalseed) % 5000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -1016,7 +1018,7 @@ void LargeStructuralIntegrityVerificationTest() {
   // Delete All keys except one - As root empty is not handled by delete yet
   for (int i = 0; i < 999; i++) {
     auto iter = keys.begin();
-    // int k = rand() % keys.size();
+    // int k = rand_r(&globalseed) % keys.size();
     // for(int j = 0; j < k; j++) iter++;
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
@@ -1034,7 +1036,7 @@ void LargeStructuralIntegrityVerificationTest() {
   // Insert Again
   for (unsigned i = 0; i < 1000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 5000;
+    int k = rand_r(&globalseed) % 5000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -1051,7 +1053,7 @@ void LargeStructuralIntegrityVerificationTest() {
   // Delete Again now two keys remaining
   for (int i = 0; i < 999; i++) {
     auto iter = keys.begin();
-    // int k = rand() % keys.size();
+    // int k = rand_r(&globalseed) % keys.size();
     // for(int j = 0; j < k; j++) iter++;
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
@@ -1094,7 +1096,7 @@ void LargeStructuralIntegrityVerificationTestReverse() {
   std::set<int> keys;
   for (unsigned i = 0; i < 1000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 5000;
+    int k = rand_r(&globalseed) % 5000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -1112,7 +1114,7 @@ void LargeStructuralIntegrityVerificationTestReverse() {
   // Delete All keys except one - As root empty is not handled by delete yet
   for (int i = 0; i < 999; i++) {
     auto iter = keys.rbegin();
-    // int k = rand() % keys.size();
+    // int k = rand_r(&globalseed) % keys.size();
     // for(int j = 0; j < k; j++) iter++;
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
@@ -1130,7 +1132,7 @@ void LargeStructuralIntegrityVerificationTestReverse() {
   // Insert Again
   for (unsigned i = 0; i < 1000; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 5000;
+    int k = rand_r(&globalseed) % 5000;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -1148,7 +1150,7 @@ void LargeStructuralIntegrityVerificationTestReverse() {
   // Delete Again now two keys remaining
   for (int i = 0; i < 999; i++) {
     auto iter = keys.rbegin();
-    // int k = rand() % keys.size();
+    // int k = rand_r(&globalseed) % keys.size();
     // for(int j = 0; j < k; j++) iter++;
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
     p1.first = *iter;
@@ -1193,7 +1195,7 @@ void StructuralIntegrityTestWithRandomInsertAndDelete2() {
   // std::cout << "Inserting " << std::endl;
   for (unsigned i = 0; i < 37; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 60;
+    int k = rand_r(&globalseed) % 60;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
@@ -1249,7 +1251,7 @@ void StructuralIntegrityTestWithRandomInsertAndDelete2Reverse() {
   // std::cout << "Inserting " << std::endl;
   for (unsigned i = 0; i < 37; i++) {
     BPlusTree<int, TupleSlot>::KeyElementPair p1;
-    int k = rand() % 60;
+    int k = rand_r(&globalseed) % 60;
     while (keys.find(k) != keys.end()) k++;
     keys.insert(k);
     p1.first = k;
