@@ -1368,7 +1368,7 @@ class BPlusTree : public BPlusTreeBase {
       }
       bool return_value = true;
       for (auto it = result.begin(); it != result.end(); it++) {
-        if (!(result)) {
+        if (!(return_value)) {
           break;
         }
         if (values.count(*(it)) == 0) {
@@ -1634,7 +1634,6 @@ class BPlusTree : public BPlusTreeBase {
     element_p = node->FindLocation(index_high_key, this);
 
     bool reach_end = false;
-    bool result_val = false;
     if (element_p != node->Begin()) {
       // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
       element_p--;
