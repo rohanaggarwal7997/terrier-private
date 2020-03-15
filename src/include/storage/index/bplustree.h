@@ -608,11 +608,11 @@ class BPlusTree : public BPlusTreeBase {
      * Note that this constructor uses the low key and high key stored as
      * members to initialize the NodeMetadata object in class BaseNode
      */
-    ElasticNode(NodeType p_type, int p_depth, int p_item_count, const KeyNodePointerPair &p_low_key,
-                const KeyNodePointerPair &p_high_key)
+    ElasticNode(NodeType p_type, int p_depth, int p_item_count, const KeyNodePointerPair *p_low_key,
+                const KeyNodePointerPair *p_high_key)
         : BaseNode{p_type, &low_key_, &high_key_, p_depth, p_item_count},
-          low_key_{p_low_key},
-          high_key_{p_high_key},
+          low_key_{*p_low_key},
+          high_key_{*p_high_key},
           end_{start_} {}
 
     /*
@@ -893,7 +893,7 @@ class BPlusTree : public BPlusTreeBase {
       // elastic_node->InitializeEnd();
 
       auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
-      new (elastic_node) ElasticNode{p_type, p_depth, p_item_count, p_low_key, p_high_key};
+      new (elastic_node) ElasticNode{p_type, p_depth, p_item_count, &p_low_key, &p_high_key};
 
       return elastic_node;
     }
@@ -2678,7 +2678,7 @@ class BPlusTree : public BPlusTreeBase {
           */
 
           return false;
-        } 
+        }
 
         if (found_value) {
           if (finished_deletion) {
@@ -2698,7 +2698,7 @@ class BPlusTree : public BPlusTreeBase {
             */
 
             return is_deleted;
-          } 
+          }
 
           if (!finished_deletion) {
             // Need to continue with pessimistic
@@ -2852,15 +2852,14 @@ class BPlusTree : public BPlusTreeBase {
           /*Locking Code End*/
 
           return is_deleted;
-        } 
-        
+        }
+
         // Key not found
         /*Locking Code*/
         RelaseLastLocksDelete(lock_list);
         /*Locking Code End*/
         return false;
-
-      } 
+      }
 
       if (leaf_position == node->Begin()) {
         // Key not found
@@ -2869,7 +2868,7 @@ class BPlusTree : public BPlusTreeBase {
         /*Locking Code End*/
         return false;
       }
-  
+
     } else {
       // Inner Node case => call delete element on child and check if child becomes underfull
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
@@ -2912,8 +2911,8 @@ class BPlusTree : public BPlusTreeBase {
         /*Locking Code End*/
 
         return true;
-      } 
-      
+      }
+
       // Reached here => not deleted
       /*Locking Code*/
       RelaseLastLocksDelete(lock_list);
