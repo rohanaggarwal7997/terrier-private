@@ -61,7 +61,7 @@ class BPlusTreeIndex final : public Index {
     // Register an abort action with the txn context in case of rollback
     txn->RegisterAbortAction([=]() {
       // FIXME(15-721 project2): perform a delete from the underlying data structure of the key/value pair
-      const bool UNUSED_ATTRIBUTE result = true;
+      const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));
 
       TERRIER_ASSERT(result, "Delete on the index failed.");
     });
@@ -93,7 +93,7 @@ class BPlusTreeIndex final : public Index {
       // Register an abort action with the txn context in case of rollback
       txn->RegisterAbortAction([=]() {
         // FIXME(15-721 project2): perform a delete from the underlying data structure of the key/value pair
-        const bool UNUSED_ATTRIBUTE result = true;
+        const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));
         TERRIER_ASSERT(result, "Delete on the index failed.");
       });
     } else {
@@ -119,7 +119,7 @@ class BPlusTreeIndex final : public Index {
     txn->RegisterCommitAction([=](transaction::DeferredActionManager *deferred_action_manager) {
       deferred_action_manager->RegisterDeferredAction([=]() {
         // FIXME(15-721 project2): perform a delete from the underlying data structure of the key/value pair
-        const bool UNUSED_ATTRIBUTE result = true;
+        const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));;
 
         TERRIER_ASSERT(result, "Deferred delete on the index failed.");
       });
@@ -168,7 +168,15 @@ class BPlusTreeIndex final : public Index {
     if (low_key_exists) index_low_key.SetFromProjectedRow(*low_key, metadata_, num_attrs);
     if (high_key_exists) index_high_key.SetFromProjectedRow(*high_key, metadata_, num_attrs);
 
+    std::vector<TupleSlot> results;
+
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+    bplustree_->ScanAscending(index_low_key, index_high_key, low_key_exists, num_attrs,
+    high_key_exists, limit, &results, &metadata_);
+
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
+    }
   }
 
   void ScanDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
@@ -181,6 +189,17 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+    bool scan_completed = false;
+    std::vector<TupleSlot> results;
+
+    while(!scan_completed) {
+      results.clear();
+      scan_completed = bplustree_->ScanDescending(index_low_key, index_high_key, &results);
+    }
+
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
+    }
   }
 
   void ScanLimitDescending(const transaction::TransactionContext &txn, const ProjectedRow &low_key,
@@ -195,6 +214,16 @@ class BPlusTreeIndex final : public Index {
     index_high_key.SetFromProjectedRow(high_key, metadata_, metadata_.GetSchema().GetColumns().size());
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
+    bool scan_completed = false;
+    std::vector<TupleSlot> results;
+    while(!scan_completed) {
+      results.clear();
+      scan_completed = bplustree_->ScanLimitDescending(index_low_key, index_high_key, &results, limit);
+    }
+
+    for (const auto &result : results) {
+      if (IsVisible(txn, result)) value_list->emplace_back(result);
+    }
   }
 };
 

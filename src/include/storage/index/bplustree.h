@@ -6,12 +6,16 @@
 #include <list>
 #include <queue>
 #include <set>
+#include <list>
+#include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "common/spin_latch.h"
+#include "common/shared_latch.h"
+#include "storage/index/index.h"
+#include "storage/index/index_defs.h"
 
 namespace terrier::storage::index {
 
@@ -408,6 +412,9 @@ class BPlusTree : public BPlusTreeBase {
     // This counts the total number of items in the node
     int item_count_;
 
+    // Latch for each node
+    std::shared_mutex node_latch_;
+
     /*
      * Constructor
      */
@@ -515,6 +522,36 @@ class BPlusTree : public BPlusTreeBase {
     int GetItemCount() const { return metadata_.item_count_; }
 
     /*
+     * GetNodeExclusiveLatch() - Obtain the exclusive lock to the current node
+     */
+    void GetNodeExclusiveLatch() { metadata_.node_latch_.lock(); }
+
+    /*
+     * GetNodeSharedLatch() - Obtain the Shared lock to the current node
+     */
+    void GetNodeSharedLatch() { metadata_.node_latch_.lock_shared(); }
+
+    /*
+     * ReleaseNodeLatch() - Release the lock to the current node
+     */
+    void ReleaseNodeLatch() { metadata_.node_latch_.unlock(); }
+
+    /*
+     * GetLatchPointer() - Get the Latch Pointer of current node's latch
+     */
+    std::shared_mutex * GetLatchPointer() { return &(metadata_.node_latch_); }
+
+    /*
+     * TryExclusiveLock() - Try to get the exclusive lock
+     */
+    bool TryExclusiveLock() { return metadata_.node_latch_.try_lock(); }
+
+    /*
+     * TrySharedLock() - Try to get the shared read lock
+     */
+    bool TrySharedLock() { return metadata_.node_latch_.try_lock_shared(); }
+
+    /*
      * SetLowKeyPair() - Sets the low key pair of metadata
      */
     void SetLowKeyPair(const KeyNodePointerPair *p_low_key_p) { metadata_.low_key_p_ = p_low_key_p; }
@@ -591,11 +628,14 @@ class BPlusTree : public BPlusTreeBase {
       return node_p;
     }
 
+    /*
+      Free elastic node
+    */
     void FreeElasticNode() {
-      for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
-        // Manually calls destructor when the node is destroyed
-        element_p->~ElementType();
-      }
+      // for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
+      //   // Manually calls destructor when the node is destroyed
+      //   element_p->~ElementType();
+      // }
       ElasticNode *beginning_allocation = this;
       delete[] reinterpret_cast<char *>(beginning_allocation);
     }
@@ -614,6 +654,17 @@ class BPlusTree : public BPlusTreeBase {
      * Begin() - Returns a begin iterator to its internal array
      */
     ElementType *Begin() { return start_; }
+
+    /*
+     * RBegin() - Returns a reverse begin iterator to its internal array
+     */
+    inline ElementType *RBegin() {
+      if (this->GetSize() == 0) {
+        return NULL;
+      } else {
+        return (end_-1);
+      }
+    }
 
     const ElementType *Begin() const { return start_; }
 
@@ -706,6 +757,27 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     /*
+     MergeNode - Merge a given node's entries to the current node.
+     Returns true if merge successful, false otherwise
+     */
+    bool MergeNode(ElasticNode * next_node) {
+      // Merge the right type
+      if (this->GetType() != next_node->GetType()) {
+        return false;
+      }
+
+      // Is Merging possible
+      if ((this->GetItemCount() - this->GetSize()) < next_node->GetSize()) {
+        return false;
+      }
+
+      std::memmove(reinterpret_cast<void *>(this->End()),
+        reinterpret_cast<void *>(next_node->Begin()), (next_node->GetSize())*sizeof(ElementType));
+      SetEnd(this->GetSize() + next_node->GetSize());
+      return true;
+    }
+
+    /*
     Pop Begin - Pops the first element from the list
     Returns False if empty
     */
@@ -720,6 +792,38 @@ class BPlusTree : public BPlusTreeBase {
       SetEnd(this->GetSize() - 1);
       return true;
     }
+
+    /*
+    Pop Back - Pops the last element from the list
+    Returns False if empty
+    */
+    bool PopEnd() {
+      if(this->GetSize() == 0) return false;
+      if(this->GetSize() == 1) {
+        SetEnd(0);
+        return true;
+      }
+      SetEnd(this->GetSize() - 1);
+      return true;
+    }
+
+    /*
+    Erase - remove the element at index 'i' from the list
+    Returns False if empty
+    */
+    bool Erase(int i) {
+
+      if(this->GetSize() <= i) return false;
+      
+      if(this->GetSize() == 1) {
+        SetEnd(0);
+        return true;
+      }
+      std::memmove(reinterpret_cast<void *>(start_ + i), reinterpret_cast<void *>(start_ + i + 1),
+        (this->GetSize() - i - 1)*sizeof(ElementType));
+      SetEnd(this->GetSize() - 1);
+      return true;
+    }    
 
     /*
     FindLocation - Returns the start of the first element that compares
@@ -780,15 +884,20 @@ class BPlusTree : public BPlusTreeBase {
       // Note: do not make it constant since it is going to be modified
       // after being returned
       auto *alloc_base = new char[sizeof(ElasticNode) + size * sizeof(ElementType)];
+      // auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
+      // elastic_node->SetLowKeyPair(elastic_node->GetElasticLowKeyPair());
+      // elastic_node->SetHighKeyPair(elastic_node->GetElasticHighKeyPair());
+      // elastic_node->SetItemCount(p_item_count);
+      // elastic_node->SetType(p_type);
+      // elastic_node->SetDepth(p_depth);
+      // elastic_node->SetElasticLowKeyPair(p_low_key);
+      // elastic_node->SetElasticHighKeyPair(p_high_key);
+      // elastic_node->InitializeEnd();
+
       auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
-      elastic_node->SetLowKeyPair(elastic_node->GetElasticLowKeyPair());
-      elastic_node->SetHighKeyPair(elastic_node->GetElasticHighKeyPair());
-      elastic_node->SetItemCount(p_item_count);
-      elastic_node->SetType(p_type);
-      elastic_node->SetDepth(p_depth);
-      elastic_node->SetElasticLowKeyPair(p_low_key);
-      elastic_node->SetElasticHighKeyPair(p_high_key);
-      elastic_node->InitializeEnd();
+      new (elastic_node) ElasticNode{p_type, p_depth, p_item_count, p_low_key, p_high_key};
+
+
       return elastic_node;
     }
 
@@ -887,9 +996,9 @@ class BPlusTree : public BPlusTreeBase {
   const KeyValuePairComparator key_value_pair_cmp_obj_;
   const KeyValuePairEqualityChecker key_value_pair_eq_obj_;
 
- private:
-  BaseNode *root_;
-  mutable common::SpinLatch root_latch_;
+  private:
+  BaseNode * root_;
+  std::shared_mutex root_latch_;
 
  public:
   /*
@@ -951,13 +1060,25 @@ class BPlusTree : public BPlusTreeBase {
     Returns null if not found
   */
   void FindValueOfKey(KeyType key, std::vector<ValueType>* result) {
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch_);
 
-    if (root_ == nullptr) {
+    root_latch_.lock_shared();
+
+    if(root_ == NULL) {
+      root_latch_.unlock();
       return;
     }
 
-    BaseNode *current_node = root_;
+    BaseNode * current_node = root_;
+    BaseNode * parent = NULL;
+
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch_.unlock();
+    /*
+      Locking Code End
+    */
 
     // Traversing Down to the right leaf node
     while (current_node->GetType() != NodeType::LeafType) {
@@ -967,12 +1088,23 @@ class BPlusTree : public BPlusTreeBase {
       auto index_pointer = node->FindLocation(key, this);
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
+      parent = current_node;
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
       } else {
         current_node = node->GetLowKeyPair().second;
       }
+
+
+      /*
+        Locking Code
+      */
+      current_node->GetNodeSharedLatch();
+      parent->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
@@ -983,9 +1115,13 @@ class BPlusTree : public BPlusTreeBase {
           (*result).push_back(*itr_list);
           itr_list++;
         }
+
+        current_node->ReleaseNodeLatch();
         return;
       }
     }
+
+    current_node->ReleaseNodeLatch();
   }
 
   void PrintTreeNode(BaseNode *node) {
@@ -1133,7 +1269,7 @@ class BPlusTree : public BPlusTreeBase {
     is correct or not.
   */
   bool SiblingForwardCheck(std::set<KeyType>* keys) {
-    int key = *(*keys).begin();
+    KeyType key = *(*keys).begin();
     if (root_ == nullptr) {
       return false;
     }
@@ -1180,7 +1316,7 @@ class BPlusTree : public BPlusTreeBase {
     is correct or not.
   */
   bool SiblingBackwardCheck(std::set<KeyType>* keys) {
-    int key = *(*keys).rbegin();
+    KeyType key = *(*keys).rbegin();
     if (root_ == nullptr) {
       return false;
     }
@@ -1225,25 +1361,25 @@ class BPlusTree : public BPlusTreeBase {
    * check if the values_list in the tree have the same values as the map given
    * in the function.
    */
-  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::vector<ValueType>>* keys_values) {
+  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::set<ValueType>>* keys_values) {
     auto itr = (*keys_values).begin();
     for (; itr != (*keys_values).end(); itr++) {
       KeyType k = itr->first;
-      std::vector<ValueType> values = (*keys_values)[k];
+      std::set<ValueType> values = (*keys_values)[k];
       std::vector<ValueType> result;
       FindValueOfKey(k, &result);
       if (result.empty()) {
         return false;
       }
-      auto it = result.begin();
-      for (unsigned j = 0; j < values.size(); j++) {
-        if (it == result.end()) {
+      for(auto it = result.begin(); it != result.end(); it++) {
+        if(values.count(*(it)) == 0) {
           return false;
+        } else {
+          values.erase(*(it));
         }
-        if (values[j] != *(it)) {
-          return false;
-        }
-        it++;
+      }
+      if (values.size() != 0) {
+        return false;
       }
     }
     return true;
@@ -1282,7 +1418,8 @@ class BPlusTree : public BPlusTreeBase {
   Returns current heap usage
   */
   size_t GetHeapUsage() {
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch_);
+
+    root_latch_.lock();
     if (root_ == nullptr) return 0;
 
     std::queue<BaseNode *> bfs_queue;
@@ -1325,6 +1462,346 @@ class BPlusTree : public BPlusTreeBase {
   }
 
   /*
+    Scan Ascending - Duplicates the Scan Ascending Behaviour in bwtree_index.h
+  */
+  void ScanAscending(KeyType index_low_key, KeyType index_high_key, bool low_key_exists, uint32_t num_attrs,
+    bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
+    
+    root_latch_.lock_shared();
+
+    if(root_ == nullptr) {
+      root_latch_.unlock();
+      return;
+    }
+
+    BaseNode * current_node = root_;
+    BaseNode * parent = nullptr;
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch_.unlock();
+    /*
+      Locking Code End
+    */
+
+    // Traversing Down to the correct leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+      // Set parent for releasing the lock
+      parent = current_node;
+
+      if(low_key_exists) {
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_low_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+      } else {
+        current_node = current_node->GetLowKeyPair().second;
+      }
+      /*
+        Locking Code
+      */
+      current_node->GetNodeSharedLatch();
+      parent->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    if(low_key_exists) {
+      element_p = node->FindLocation(index_low_key, this);
+      if(element_p != node->Begin()) {
+        if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+          element_p --;
+        }
+        if(element_p == node->End()) {
+          if(node->GetHighKeyPair().second == NULL) {
+            current_node->ReleaseNodeLatch();
+            return;
+          }
+          parent = node;
+          node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+          current_node = node;
+          /*
+          Locking Code
+          */
+          current_node->GetNodeSharedLatch();
+          parent->ReleaseNodeLatch();
+          /*
+            Locking Code End
+          */
+          element_p = node->Begin();
+        }
+
+      } 
+    } else {
+      element_p = node->Begin();
+    }
+
+    while ((limit == 0 || value_list->size() < limit) &&
+      (!high_key_exists || element_p->first.PartialLessThan(index_high_key, metadata, num_attrs))) {
+      
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+        value_list->push_back(*itr_list);
+        if(!(limit == 0 || value_list->size() < limit)) break;
+        itr_list++;
+      }
+
+      element_p++;
+      if(element_p == node->End()) {
+        if(node->GetHighKeyPair().second == NULL) break;
+        parent = node;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
+        current_node = node;
+        /*
+        Locking Code
+        */
+        current_node->GetNodeSharedLatch();
+        parent->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
+        element_p = node->Begin();
+      }
+    }
+
+    current_node->ReleaseNodeLatch();
+
+    return;
+  }
+
+  /*
+    Scan Descending - Duplicates the Scan Descending Behaviour in bwtree_index.h
+  */
+  bool ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
+
+    root_latch_.lock_shared();
+
+    if(root_ == nullptr) {
+      root_latch_.unlock();
+      return true;
+    }
+
+    BaseNode * current_node = root_;
+    BaseNode * parent = NULL;
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch_.unlock();
+    /*
+      Locking Code End
+    */
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_high_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+
+        // set parent for crabbing
+        parent = node;
+
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+        /*
+        Locking Code
+        */
+        current_node->GetNodeSharedLatch();
+        parent->ReleaseNodeLatch();
+        /*
+        Locking Code End
+        */
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    element_p = node->FindLocation(index_high_key, this);
+    if(element_p != node->Begin()) {
+      // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+      element_p --;
+      // }
+    } else {
+      if(node->GetLowKeyPair().second == NULL) {
+        current_node->ReleaseNodeLatch();
+        return true;
+      } else {
+        parent = node;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
+        element_p = node->End() - 1;
+      }
+    }
+
+    while(KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+
+        value_list->push_back(*itr_list);
+        itr_list++;
+      }
+
+      element_p--;
+      if(element_p == node->Begin() - 1) {
+        parent = node;
+        if(node->GetLowKeyPair().second == NULL) break;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
+        element_p = node->End() - 1;
+      }
+    }
+
+    current_node->ReleaseNodeLatch();
+    return true;
+  }
+
+  /*
+    Scan Limit Descending - Duplicates the Scan Limit Descending Behaviour in bwtree_index.h
+  */
+  bool ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
+    uint32_t limit) {
+
+    root_latch_.lock_shared();
+
+    if(root_ == nullptr) {
+      root_latch_.unlock();
+      return true;
+    }
+
+    BaseNode * current_node = root_;
+    BaseNode * parent = NULL;
+    /*
+        Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    root_latch_.unlock();
+    /*
+      Locking Code End
+    */
+
+    // Traversing Down to the right leaf node
+    while(current_node->GetType() != NodeType::LeafType) {
+
+        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+        // Note that Find Location returns the location of first element
+        // that compare greater than
+        auto index_pointer = node->FindLocation(index_high_key, this);
+        // Thus we have to go in the left side of location which will be the
+        // pointer of the previous location.
+
+        // set parent for crabbing
+        parent = node;
+        if(index_pointer != node->Begin()) {
+          index_pointer -= 1;
+          current_node = index_pointer->second;
+        }
+        else current_node = node->GetLowKeyPair().second;
+
+        /*
+        Locking Code
+        */
+        current_node->GetNodeSharedLatch();
+        parent->ReleaseNodeLatch();
+        /*
+        Locking Code End
+        */
+    }
+
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    KeyValuePair * element_p;
+    element_p = node->FindLocation(index_high_key, this);
+    if(element_p != node->Begin()) {
+      // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+      element_p --;
+      // }
+    } else {
+      if(node->GetLowKeyPair().second == NULL) {
+        current_node->ReleaseNodeLatch();
+        return true;
+      } else {
+        parent = node;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
+        element_p = node->End() - 1;
+      }
+    }
+
+    while((value_list->size() < limit) && KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+
+      auto itr_list = element_p->second->begin();
+      while(itr_list != element_p->second->end()) {
+        value_list->push_back(*itr_list);
+        if(value_list->size() >= limit) break;
+        itr_list++;
+      }
+
+      element_p--;
+      if(element_p == node->Begin() - 1) {
+        parent = node;
+        if(node->GetLowKeyPair().second == NULL) break;
+        node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
+        current_node = node;
+        if (!(current_node->TrySharedLock())) {
+          parent->ReleaseNodeLatch();
+          return false;
+        }
+        parent->ReleaseNodeLatch();
+        element_p = node->End() - 1;
+      }
+    }
+
+    current_node->ReleaseNodeLatch();
+    return true;
+  }
+
+  bool ReleaseAllLocks(std::vector<BaseNode *> &node_list, bool got_root_latch) {
+    while(!node_list.empty()) {
+      (*node_list.rbegin())->ReleaseNodeLatch();
+      node_list.pop_back();
+    }
+    if(got_root_latch) {
+      got_root_latch = false;
+      root_latch_.unlock();
+    }
+    return got_root_latch;
+  }
+
+  /*
     Insert - adds element in the tree
     The structure followed in the code is the lowKeyPointerPair's pointer represents
     the leftmost pointer. While for all other nodes their pointer go to a node on their
@@ -1332,9 +1809,14 @@ class BPlusTree : public BPlusTreeBase {
   */
 
   bool Insert(const KeyElementPair element, std::function<bool(const ValueType)> predicate) {
+    /*
+     ****************************
+      First try optimistic insert
+     **************************** 
+    */
     /* If root is NULL then we make a Leaf Node.
      */
-    common::SpinLatch::ScopedSpinLatch guard(&root_latch_);
+    root_latch_.lock();
 
     if (root_ == nullptr) {
       KeyNodePointerPair p1, p2;
@@ -1342,18 +1824,51 @@ class BPlusTree : public BPlusTreeBase {
       p2.first = element.first;
       p1.second = NULL;
       p2.second = NULL;
+
       root_ = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
                                              leaf_node_size_upper_threshold_, p1, p2);
     }
+    // beyond this point we'll have exclusive_lock on tree lock
 
     BaseNode *current_node = root_;
-    // Stack of pointers
-    std::vector<BaseNode *> node_list;
+    BaseNode *parent_node = nullptr;
+
+
+    /*
+      Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    /*
+      Locking Code End
+    */
+
 
     // Traversing Down and maintaining a stack of pointers
     while (current_node->GetType() != NodeType::LeafType) {
-      node_list.push_back(current_node);
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+
+      /*
+        Locking Code
+        Release parent's shared lock
+      */
+      if (parent_node != nullptr) {
+        parent_node->ReleaseNodeLatch();
+      } else {
+        root_latch_.unlock();
+      }
+      // if(node->GetSize() < node->GetItemCount()) {
+      //   got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+      // } 
+      /*
+        Locking Code End
+      */
+
+
+
+
+      // node_list.push_back(current_node);
+      
       // Note that Find Location returns the location of first element
       // that compare greater than
       auto index_pointer = node->FindLocation(element.first, this);
@@ -1361,33 +1876,86 @@ class BPlusTree : public BPlusTreeBase {
       // pointer of the previous location.
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
+        parent_node = current_node;
         current_node = index_pointer->second;
       } else {
+        parent_node = current_node;
         current_node = node->GetLowKeyPair().second;
       }
+
+
+      /*
+        Locking Code
+        Get current node's shared lock
+      */
+      current_node->GetNodeSharedLatch();
+      /*
+        Locking Code End
+      */
     }
+
+    // Now we try insertion into the found leaf node
+    // only if insertion without splitting is possible
+
+    /*
+      Locking Code
+      Get current node's exclusive lock and free parent
+    */
+    current_node->ReleaseNodeLatch();
+    current_node->GetNodeExclusiveLatch();
+    if (parent_node != nullptr) {
+      parent_node->ReleaseNodeLatch();
+    } else {
+      root_latch_.unlock();
+    }
+    /*
+      Locking Code End
+      Beyond this we only have exclusive latch on the current_node
+    */
+
+
 
     bool finished_insertion = false;
     // We maintain the element that we have to recursively insert up.
     // This is the element that has to be inserted into the inner nodes.
-    KeyNodePointerPair inner_node_element;
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
 
     auto location_greater_key_leaf = node->FindLocation(element.first, this);
     if (location_greater_key_leaf != node->Begin()) {
       if (KeyCmpEqual((location_greater_key_leaf - 1)->first, element.first)) {
+        // Key present in tree => insert into value list
         auto itr_list = (location_greater_key_leaf - 1)->second->begin();
         while (itr_list != (location_greater_key_leaf - 1)->second->end()) {
           if (ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
+
+            /*
+              Release all locks if the value is already present
+            */
+            current_node->ReleaseNodeLatch();
+            /*
+              Locking Code End
+  
+            */
             return false;
           }
           itr_list++;
         }
         (location_greater_key_leaf - 1)->second->push_back(element.second);
+
+        /*
+        Locking Code
+        */
+        current_node->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
+
         finished_insertion = true;
-      }
-    }
-    if (!finished_insertion) {
+      }  
+    } 
+    
+    // Insertion not done yet as key is not present 
+    if(!finished_insertion) {
       auto value_list = new std::list<ValueType>();
       value_list->push_back(element.second);
       KeyValuePair key_list_value;
@@ -1396,6 +1964,165 @@ class BPlusTree : public BPlusTreeBase {
       if (node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this))) {
         // If you can directly insert in the leaf - Insertion is over
         finished_insertion = true;
+        /*
+        Locking Code
+        */
+        current_node->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
+      } else {
+        delete value_list;
+      }
+      // Otherwise you split the node
+      // Optimistic approach failed
+    }
+
+    if (finished_insertion){
+      return true;
+    } else {
+      // Pessimistic approach failed
+      /*
+      Locking Code
+      */
+      current_node->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
+    } 
+
+    /*
+     ****************************************
+      if not successful -> pessimistic insert
+     **************************************** 
+    */
+
+    /* If root is NULL then we make a Leaf Node.
+     */
+    root_latch_.lock();
+    bool got_root_latch = true;
+
+    if (root_ == nullptr) {
+      KeyNodePointerPair p1, p2;
+      p1.first = element.first;
+      p2.first = element.first;
+      p1.second = nullptr;
+      p2.second = nullptr;
+      root_ = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
+                                            leaf_node_size_upper_threshold_, p1, p2);
+    }
+
+
+    current_node = root_;
+
+
+    /*
+      Locking Code
+    */
+      current_node->GetNodeExclusiveLatch();
+    /*
+      Locking Code End
+    */
+
+
+    // Stack of pointers
+    std::vector<BaseNode *> node_list;
+
+    // Traversing Down and maintaining a stack of pointers
+    while (current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+
+      /*
+        Locking Code
+      */
+      if(node->GetSize() < node->GetItemCount()) {
+        got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+      } 
+      /*
+        Locking Code End
+      */
+
+
+
+
+      node_list.push_back(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(element.first, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if (index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      } else
+        current_node = node->GetLowKeyPair().second;
+
+
+      /*
+        Locking Code
+      */
+      current_node->GetNodeExclusiveLatch();
+      /*
+        Locking Code End
+      */
+    }
+
+
+
+    finished_insertion = false;
+    // We maintain the element that we have to recursively insert up.
+    // This is the element that has to be inserted into the inner nodes.
+    KeyNodePointerPair inner_node_element;
+    node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+
+    location_greater_key_leaf = node->FindLocation(element.first, this);
+    if (location_greater_key_leaf != node->Begin()) {
+      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+
+        auto itr_list = (location_greater_key_leaf - 1)->second->begin();
+        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if(ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
+
+            /*
+              Release all locks if the value is already present
+            */
+            current_node->ReleaseNodeLatch();
+            got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+
+            /*
+              Locking Code End
+  
+            */
+            return false;
+          }
+          itr_list++;
+        }
+        (location_greater_key_leaf - 1)->second->push_back(element.second);
+
+        /*
+        Locking Code
+        */
+        current_node->ReleaseNodeLatch();
+        got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+        /*
+          Locking Code End
+        */
+
+        finished_insertion = true;
+      }  
+    } 
+    if(finished_insertion == false)
+    {
+      auto value_list = new std::list<ValueType>();
+      value_list->push_back(element.second);
+      KeyValuePair key_list_value;
+      key_list_value.first = element.first;
+      key_list_value.second = value_list;
+      if (node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this))) {
+        // If you can directly insert in the leaf - Insertion is over
+        finished_insertion = true;
+        got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
       } else {
         // Otherwise you split the node
         // Now pay attention to the fact that when we copy up the right pointer
@@ -1419,8 +2146,24 @@ class BPlusTree : public BPlusTreeBase {
         // node_right = splitted
         // splitted_left = node
         if (node->GetElasticHighKeyPair()->second != NULL) {
+          /*
+            Locking Code
+          */
+          node->GetElasticHighKeyPair()->second->GetNodeExclusiveLatch();
+          /*
+            Locking Code End
+          */
+
           auto node_next = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node->GetElasticHighKeyPair()->second);
           node_next->GetElasticLowKeyPair()->second = splitted_node;
+
+          /*
+            Locking Code
+          */
+          node->GetElasticHighKeyPair()->second->ReleaseNodeLatch();
+          /*
+            Locking Code End
+          */
         }
         splitted_node->GetElasticHighKeyPair()->second = node->GetElasticHighKeyPair()->second;
         node->GetElasticHighKeyPair()->second = splitted_node;
@@ -1430,6 +2173,8 @@ class BPlusTree : public BPlusTreeBase {
         inner_node_element.first = splitted_node->Begin()->first;
         inner_node_element.second = splitted_node;
       }
+
+      current_node->ReleaseNodeLatch();
     }
 
     while (!finished_insertion && !node_list.empty()) {
@@ -1443,8 +2188,6 @@ class BPlusTree : public BPlusTreeBase {
       } else {
         // otherwise we have to recursively split again
 
-        /*TODO: Some problem here - the leftmost pointer is not set properly
-        Have to add code to set it properly*/
         auto splitted_node = inner_node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
         if (KeyCmpGreater(splitted_node_begin->first, inner_node_element.first)) {
@@ -1460,7 +2203,9 @@ class BPlusTree : public BPlusTreeBase {
         inner_node_element.second = splitted_node;
         splitted_node->PopBegin();
       }
+      inner_node->ReleaseNodeLatch();
     }
+
 
     // If still insertion is not finished we have to split the root node.
     // Remember the root must have been split by now.
@@ -1477,39 +2222,741 @@ class BPlusTree : public BPlusTreeBase {
       new_root_node->InsertElementIfPossible(inner_node_element,
                                              new_root_node->FindLocation(inner_node_element.first, this));
     }
+
+    if(got_root_latch) {
+      got_root_latch = false;
+      root_latch_.unlock();
+    }
+
     return true;
   }
 
-  /*
-   *    InsertUnique - adds key and value in the tree only
-   *    if the particular value has not been seen for that
-   *    particular key.
-   */
-  //  bool InsertUnique(KeyType key, ValueType value) {
-  //    // retrieve the value list of the key from tree
-  //    std::list<ValueType> * value_list_p = FindValueOfKey(key);
-  //    if(value_list_p == NULL) {  // list doesn't exist, insert safely
-  //      auto value_list = new std::list<ValueType>();
-  //      value_list->push_back(value);
-  //      Insert(KeyValuePair(key, value_list));
-  //    }
-  //    else { // check if the list does not have it
-  //      // return if there is the value
-  //      auto itr = value_list_p->begin();
-  //      for(;itr!=value_list_p->end();itr++) {
-  //        if(ValueCmpEqual(*itr, value)) {
-  //          return false;
-  //        }
-  //      }
-  //      value_list_p->push_back(value);
-  //    }
-  //    return true;
-  //  }
+  template<typename ElementType> 
+  void DeleteRebalance(ElasticNode<KeyNodePointerPair> * parent, 
+    BaseNode * input_child_pointer, int index, int node_lower_threshold) {
 
-  explicit BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
-                     KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
-                     ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{},
-                     ValueHashFunc p_value_hash_obj = ValueHashFunc{})
+    // We assume that we have exclusive lock for parent and only try to get lock for child nodes
+    /*Locking Code*/
+    // Get child lock before proceeding
+    input_child_pointer->GetNodeExclusiveLatch();
+    /*Locking Code End*/
+    
+    auto child = reinterpret_cast<ElasticNode<ElementType> *>(input_child_pointer);
+
+    if (child->GetSize() >= node_lower_threshold) {
+      /*Locking Code*/
+      input_child_pointer->ReleaseNodeLatch();
+      /*Locking Code End*/
+
+      return;
+    } 
+
+    // Need to rebalance
+    if (index > -1) {
+      BaseNode* left_sibling_base_node;
+      ElasticNode<ElementType> * left_sibling;
+      if(index == 0) {
+        left_sibling_base_node = parent->GetLowKeyPair().second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
+      } else {
+        left_sibling_base_node = (parent->Begin() + index - 1)->second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
+      }
+
+      /*Locking Code*/
+      // Get left sibling lock before checking for borrowing
+      left_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/
+
+      if(left_sibling->GetSize() > node_lower_threshold) {
+
+
+        /*
+        This is for Inner Node only
+        Remember for leaf node - You cannot bring down A.
+        Capital chars represent Keys. Small chars represent nodes.                    
+                            A                                               C
+                          /   \                                          /     \
+                       [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                        /  \      /  \  \                             /  \  \   /  \
+                       a    b    c   d   e                           a   b   c  d   e
+
+            Initially
+           C - (parent->Begin() + index)-key
+           A - left sibling->Rbegin()->first
+           D - child->Begin()->first
+           d - child->lowkeypair().second
+           c - left sibling->Rbegin()->second
+
+            Finally
+           A - (parent->Begin() + index)-key
+           C - child->Begin()->first
+           c - child->lowkeypair().second
+           d - child->Begin()->second
+           D - (child->Begin() + 1)->first - Happens automatically
+        */
+
+        // Borrow one
+
+        if(child->GetType() == NodeType::LeafType) {
+          (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
+          child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
+          left_sibling->PopEnd();
+        } else {
+          auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
+          auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
+          /* 
+            Make C->d to insert in child
+          */
+          /*C*/auto parent_key = (parent->Begin() + index)->first;
+          /*d*/auto current_low_pointer = inner_child->GetLowKeyPair().second; 
+          KeyNodePointerPair to_insert;
+          to_insert.first = parent_key;
+          to_insert.second = current_low_pointer;
+          inner_child->InsertElementIfPossible(to_insert, inner_child->Begin());
+          /*
+            Make low key pointer c
+          */
+          inner_child->GetElasticLowKeyPair()->second = inner_left_sibling->RBegin()->second;
+
+          /*
+            Update parent key to A
+          */
+          (parent->Begin() + index)->first = inner_left_sibling->RBegin()->first;
+
+          /*
+            Delete A->c
+          */
+          left_sibling->PopEnd();
+        }
+
+        // Borrow successful, release child and left sibling locks
+        /*Locking Code*/
+        input_child_pointer->ReleaseNodeLatch();
+        left_sibling_base_node->ReleaseNodeLatch();
+        /*Locking Code End*/
+
+        return;
+      }
+
+      /*Locking Code*/
+      // Borrow unsuccessful, release left sibling locks
+      left_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
+    }
+
+    if(index < parent->GetSize() - 1) {
+      BaseNode* right_sibling_base_node = (parent->Begin() + index + 1)->second;
+      ElasticNode<ElementType> * right_sibling = 
+        reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+
+      /*Locking Code*/
+      // Get right sibling lock before checking for borrowing
+      right_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/  
+
+      if(right_sibling->GetSize() > node_lower_threshold) {
+
+
+        /*
+        This is for Inner Node only
+        Remember for leaf node - You cannot bring down A.
+        Capital chars represent Keys. Small chars represent nodes.                    
+                        X   A                                          X    C
+                          \   \                                          /     \
+                       [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                        /  \      /  \  \                             /  \  \   /  \
+                       a    b    c   d   e                           a   b   c  d   e
+
+            Initially
+           X - (parent->Begin() + index)-key
+           A - (parent->Begin() + index + 1)-key
+           C - right_sibling->Begin()->first
+           c - right_sibling->lowkeypair().second
+           d - right_sibling->Begin()->second
+           D - (right_sibling->Begin() + 1)->first - Happens automatically
+
+            Finally
+           X - (parent->Begin() + index)-key
+           C - (parent->Begin() + index + 1)-key
+           A - child->Rbegin()->first
+           D - right_sibling->Begin()->first
+           d - right_sibling->lowkeypair().second
+           c - child->Rbegin()->second
+        */
+
+        // Borrow one
+
+        if(child->GetType() == NodeType::InnerType) {
+          auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
+          auto inner_right_sibling = reinterpret_cast<InnerNode *> (right_sibling);
+          /* 
+            Make A->c to insert in child
+          */
+          /*A*/auto parent_key = (parent->Begin() + index + 1)->first;
+          /*c*/auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second;
+          KeyNodePointerPair to_insert;
+          to_insert.first = parent_key;
+          to_insert.second = current_low_pointer;
+          inner_child->InsertElementIfPossible(to_insert, inner_child->End());
+          /*
+            Make low key pointer d
+          */
+          right_sibling->GetElasticLowKeyPair()->second = inner_right_sibling->Begin()->second;
+
+          /*
+            Update A to C
+          */
+          (parent->Begin() + index + 1)->first = inner_right_sibling->Begin()->first;
+
+          /*
+            Delete C-d
+          */
+          right_sibling->PopBegin();             
+        } else {
+          child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
+          right_sibling->PopBegin();
+          (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
+        }
+
+        // Borrow successful, release child and left sibling locks
+        /*Locking Code*/
+        input_child_pointer->ReleaseNodeLatch();
+        right_sibling_base_node->ReleaseNodeLatch();
+        /*Locking Code End*/
+
+        return;
+      }
+
+      /*Locking Code*/
+      // Borrow unsuccessful, release right sibling locks
+      right_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
+    }
+
+    // Cannot redistribute, so we perform merge
+    // We try to merge with left sibling first, if not possible 
+    // merge with right sibling   
+    if (index > -1) {
+      BaseNode* left_sibling_base_node;
+      ElasticNode<ElementType> * left_sibling;
+      if(index == 0) {
+        left_sibling_base_node = parent->GetLowKeyPair().second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
+      } else {
+        left_sibling_base_node = (parent->Begin() + index - 1)->second;
+        left_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index - 1)->second);
+      }
+
+      /*Locking Code*/
+      // Get left sibling lock before checking for borrowing
+      left_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/
+
+      /*
+                           A                                         
+                         /   \                                      B  A  C  D
+                        B    [C  D]              ==                /  \  \  \  \
+                       / \   /  \  \                              a    b  c  d  e
+                      a   b  c   d  e
+      */
+
+
+      if(left_sibling->GetType() == NodeType::InnerType) {
+        auto parent_key = (parent->Begin() + index)->first;
+        auto current_low_pointer = child->GetLowKeyPair().second;
+        auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
+
+        KeyNodePointerPair to_insert;
+        to_insert.first = parent_key;
+        to_insert.second = current_low_pointer;
+        inner_left_sibling->InsertElementIfPossible(to_insert, inner_left_sibling->End());
+      }
+
+      /*
+      Fixing sibling pointers code
+      */
+      if(left_sibling->GetType() == NodeType::LeafType) {
+        if(child->GetHighKeyPair().second != NULL) {
+          BaseNode* new_right_sibling = child->GetHighKeyPair().second;
+
+          /*Locking Code*/
+          // Get right sibling lock before updating sibling pointers
+          new_right_sibling->GetNodeExclusiveLatch();
+          /*Locking Code End*/
+
+
+          left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
+          reinterpret_cast<ElasticNode<KeyValuePair> *>(child->GetHighKeyPair().second)
+            ->GetElasticLowKeyPair()->second = left_sibling;
+
+          /*Locking Code*/
+          // updating sibling pointers complete, release lock
+          new_right_sibling->ReleaseNodeLatch();
+          /*Locking Code End*/  
+
+        } else {
+          left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
+        }
+      }
+
+
+      left_sibling->MergeNode(child);
+
+      // Merge successful, release child and left sibling locks
+      /*Locking Code*/
+      input_child_pointer->ReleaseNodeLatch();
+      left_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
+
+      child->FreeElasticNode();
+      parent->Erase(index);
+      return;
+
+    } else {
+      BaseNode* right_sibling_base_node = (parent->Begin() + index + 1)->second;
+      ElasticNode<ElementType> * right_sibling = 
+        reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+
+      /*Locking Code*/    
+      // Get left sibling lock before checking for borrowing
+      right_sibling_base_node->GetNodeExclusiveLatch();
+      /*Locking Code End*/
+
+      if(right_sibling->GetType() == NodeType::InnerType) {
+        auto parent_key = (parent->Begin() + index + 1)->first;
+        auto current_low_pointer = right_sibling->GetLowKeyPair().second;
+        auto inner_child = reinterpret_cast<InnerNode *> (child);
+
+        KeyNodePointerPair to_insert;
+        to_insert.first = parent_key;
+        to_insert.second = current_low_pointer;
+        inner_child->InsertElementIfPossible(to_insert, inner_child->End());
+      }
+
+      /*
+      Fixing sibling pointers code
+      */
+      if(child->GetType() == NodeType::LeafType) {
+        if(right_sibling->GetHighKeyPair().second != NULL) {
+          BaseNode* new_right_sibling = right_sibling->GetHighKeyPair().second;
+
+          /*Locking Code*/
+          // Get right sibling lock before updating sibling pointers
+          new_right_sibling->GetNodeExclusiveLatch();
+          /*Locking Code End*/
+
+          child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
+          reinterpret_cast<ElasticNode<KeyValuePair> *>(right_sibling->GetHighKeyPair().second)
+            ->GetElasticLowKeyPair()->second = child;
+
+          /*Locking Code*/
+          // updating sibling pointers complete, release lock
+          new_right_sibling->ReleaseNodeLatch();
+          /*Locking Code End*/
+        } else {
+          child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
+        }
+      }
+
+
+      child->MergeNode(right_sibling);
+
+      // Merge successful, release child and right sibling locks
+      /*Locking Code*/
+      input_child_pointer->ReleaseNodeLatch();
+      right_sibling_base_node->ReleaseNodeLatch();
+      /*Locking Code End*/
+
+      right_sibling->FreeElasticNode();
+      parent->Erase(index+1);
+      return;
+    }
+
+    // Should never reach this point
+    return;
+  }
+
+  /* RelaseLastLocksDelete - Releases the node's latch and pops it from the list*/
+  void RelaseLastLocksDelete(std::vector<std::shared_mutex *> * lock_list) {
+    if(lock_list->size() > 0) {
+      (*lock_list->rbegin())->unlock();
+      lock_list->pop_back();
+    }
+  }
+
+  /*
+  Delete with Lock
+  Takes a coarse grained lock and calls the delete function
+  */
+  bool DeleteWithLock(const KeyElementPair &element) {
+    /*
+     ****************************
+      First try optimistic delete
+     **************************** 
+    */
+    /* If root is NULL then we return false.
+     */
+    root_latch_.lock();
+
+    if (root_ == NULL) {
+      root_latch_.unlock();
+      return false;
+    }
+    // beyond this point we'll have exclusive_lock on tree lock
+
+    BaseNode *current_node = root_;
+    BaseNode *parent_node = nullptr;
+
+
+    /*
+      Locking Code
+    */
+    current_node->GetNodeSharedLatch();
+    /*
+      Locking Code End
+    */
+
+    // Traversing Down
+    while (current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+
+      /*
+        Locking Code
+        Release parent's shared lock
+      */
+      if (parent_node != nullptr) {
+        parent_node->ReleaseNodeLatch();
+      } else {
+        root_latch_.unlock();
+      }
+      /*
+        Locking Code End
+      */
+      
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(element.first, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
+      if (index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        parent_node = current_node;
+        current_node = index_pointer->second;
+      } else {
+        parent_node = current_node;
+        current_node = node->GetLowKeyPair().second;
+      }
+
+
+      /*
+        Locking Code
+        Get current node's shared lock
+      */
+      current_node->GetNodeSharedLatch();
+      /*
+        Locking Code End
+      */
+    }
+
+    // Now we try deletion from the found leaf node
+    // only if without sharing or merge is possible
+
+    /*
+      Locking Code
+      Get current node's exclusive lock and free parent
+    */
+    current_node->ReleaseNodeLatch();
+    current_node->GetNodeExclusiveLatch();
+    if (parent_node != nullptr) {
+      parent_node->ReleaseNodeLatch();
+    } else {
+      root_latch_.unlock();
+    }
+    /*
+      Locking Code End
+      Beyond this we only have exclusive latch on the current_node
+    */
+
+
+
+    bool finished_deletion = false;
+    auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+    auto location_greater_key_leaf = node->FindLocation(element.first, this);
+    if (location_greater_key_leaf != node->Begin()) {
+      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+        // Key present in tree => check if value present & delete from value list
+        bool found_value = false;
+        auto itr_list = (location_greater_key_leaf - 1)->second->begin();
+        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if(ValueCmpEqual(*itr_list, element.second)) {
+            /*
+              Value fround => Delete element from list if won't trigger rebalance
+            */
+            found_value = true;
+            if (((location_greater_key_leaf - 1)->second->size() > 1) || 
+                (node->GetSize() > GetLeafNodeSizeLowerThreshold())) {
+              (location_greater_key_leaf - 1)->second->erase(itr_list);
+              finished_deletion = true;
+              break;
+            }
+          }
+          itr_list++;
+        }
+        
+        if (!found_value) {
+          // Value not in tree
+          /*
+            Release node lock after value not found to delete
+          */
+          current_node->ReleaseNodeLatch();
+          /*
+            Locking Code End
+          */
+
+          return false;
+        } else if (found_value) {
+          if (finished_deletion) {
+            /*If now the list is empty delete key-emptylist from the tree*/
+            bool is_deleted = true;
+            if((location_greater_key_leaf - 1)->second->size() == 0) {
+              delete (location_greater_key_leaf - 1)->second;
+              is_deleted = node->Erase((location_greater_key_leaf - 1) - node->Begin());
+            }
+            
+            /*
+              Release node lock after delete
+            */
+            current_node->ReleaseNodeLatch();
+            /*
+              Locking Code End
+            */
+
+            return is_deleted;
+          } else {
+            // Need to continue with pessimistic
+            /*
+              Release node lock after delete
+            */
+            current_node->ReleaseNodeLatch();
+            /*
+              Locking Code End
+            */            
+          }
+        }
+      } else {
+        // Deletion not done yet as key is not present 
+      /*
+        Release node lock after key not found to delete
+      */
+      current_node->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
+
+      return false;        
+      } 
+    } else {
+
+      // Deletion not done yet as key is not present 
+      /*
+        Release node lock after key not found to delete
+      */
+      current_node->ReleaseNodeLatch();
+      /*
+        Locking Code End
+      */
+
+      return false;
+    }
+
+    /*
+     ****************************************
+      if not successful -> pessimistic delete
+     **************************************** 
+    */    
+
+
+    std::vector<std::shared_mutex *> lock_list;
+    root_latch_.lock();
+    lock_list.push_back(&root_latch_);
+    bool is_deleted = Delete(root_, element, &lock_list);
+    RelaseLastLocksDelete(&lock_list);
+    return is_deleted;
+  }
+
+  /*
+   * Delete() - Remove a key-value pair from the tree
+   *
+   * This function returns false if the key and value pair does not
+   * exist. Return true if delete succeeds
+   *
+   */
+  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<std::shared_mutex *> * lock_list) {
+    // If tree is empty, return false
+    if (current_node == NULL) {
+      return false;
+    }
+
+    /*
+      Locking Code
+    */
+    current_node->GetNodeExclusiveLatch();
+
+    bool condition_for_underflow = true;
+    if(current_node == root_) {
+      if (current_node->GetType() == NodeType::InnerType
+          && (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > 1) {
+        condition_for_underflow = false;
+      } else if (current_node->GetType() == NodeType::LeafType
+          && (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > 1) {
+        condition_for_underflow = false;
+      } 
+    }
+    if(current_node != root_ && current_node->GetType() == NodeType::InnerType
+      && (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > GetInnerNodeSizeLowerThreshold()) {
+      condition_for_underflow = false;
+    }
+    if(current_node != root_ && current_node->GetType() == NodeType::LeafType
+      && (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > GetLeafNodeSizeLowerThreshold()) {
+      condition_for_underflow = false;
+    }
+
+    if(!condition_for_underflow) {
+      while(!lock_list->empty()) {
+        (*lock_list->rbegin())->unlock();
+        lock_list->pop_back();
+      }
+    }
+
+    lock_list->push_back(current_node->GetLatchPointer());
+    /*
+      Locking Code End
+    */
+
+
+    // If delete called on leaf node, just perform deletion
+    // Else, call delete on child and check if child becomes underfull
+    if (current_node->GetType() == NodeType::LeafType) {
+      // Leaf Node case => delete element
+      auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
+      auto leaf_position = node->FindLocation(element.first, this);
+      if (leaf_position != node->Begin()) {
+        leaf_position -= 1;
+        if (KeyCmpEqual(leaf_position->first, element.first)) {
+          bool element_present = false;
+          auto itr_list = (leaf_position)->second->begin();
+          while(itr_list != (leaf_position)->second->end()) {
+            if(ValueCmpEqual(*itr_list, element.second)) {
+              /*Delete element from list*/
+              (leaf_position)->second->erase(itr_list);
+              element_present = true;
+              break;
+            }
+            itr_list++;
+          }
+
+          /*Not Found - Return false*/
+          if(!element_present) {
+            /*Locking Code*/
+            RelaseLastLocksDelete(lock_list);
+            /*Locking Code End*/
+
+            return false;
+          }
+
+          if(leaf_position->second->size() > 0) {
+            /*Locking Code*/
+            RelaseLastLocksDelete(lock_list);
+            /*Locking Code End*/
+
+            return true;
+          }
+
+          /*If now the list is empty delete key-emptylist from the tree*/
+          delete leaf_position->second;
+          bool is_deleted = node->Erase(leaf_position - node->Begin());
+          if (is_deleted && node->GetSize() == 0) {
+            // all elements of tree are now deleted
+            node->FreeElasticNode(); /*Important - we need to free node*/
+            root_ = NULL;
+          }
+
+          /*Locking Code*/
+          RelaseLastLocksDelete(lock_list);
+          /*Locking Code End*/
+
+          return is_deleted;
+        } else {
+          /*Locking Code*/
+          RelaseLastLocksDelete(lock_list);
+          /*Locking Code End*/
+          return false;
+        }
+      } else {
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
+        return false;
+      }
+    } else {
+      // Inner Node case => call delete element on child and check if child becomes underfull
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      auto child_position = node->FindLocation(element.first, this);
+      BaseNode* child_pointer;
+      int index;
+      if (child_position != node->Begin()) {
+        child_pointer = (child_position - 1)->second;
+        index = child_position - node->Begin() - 1;
+      } else {
+        child_pointer = node->GetLowKeyPair().second;
+        index = -1;
+      }
+      bool is_deleted = Delete(child_pointer, element, lock_list);
+
+      // Now perform any rebalancing or merge on child if it becomes underfull
+      if (is_deleted) {
+        if(lock_list->size() > 0) {
+          if (child_pointer->GetType() == NodeType:: LeafType) {
+            DeleteRebalance<KeyValuePair>(node, child_pointer, 
+              index, GetLeafNodeSizeLowerThreshold());
+          } else {
+            DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
+              index, GetInnerNodeSizeLowerThreshold());
+          }
+        }
+
+
+        // Check if this node is root and if its size becomes 0
+        if (node->GetSize() == 0) {
+          root_ = current_node->GetLowKeyPair().second;
+
+          /*Locking Code*/
+          RelaseLastLocksDelete(lock_list);
+          /*Locking Code End*/          
+
+          node->FreeElasticNode();
+          return true;
+        }
+
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
+
+        return true;
+      } else {
+
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
+        return false;
+      }
+    }
+  }
+
+  BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
+         KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
+         ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{}, ValueHashFunc p_value_hash_obj = ValueHashFunc{})
       : BPlusTreeBase(),
         // Key comparator, equality checker and hasher
         key_cmp_obj_{p_key_cmp_obj},
