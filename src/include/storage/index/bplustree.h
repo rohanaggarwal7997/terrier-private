@@ -3,17 +3,18 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <list>
 #include <queue>
 #include <set>
-#include <list>
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "common/shared_latch.h"
 #include "storage/index/index.h"
 #include "storage/index/index_defs.h"
-
 
 namespace terrier::storage::index {
 
@@ -46,7 +47,6 @@ class BPlusTreeBase {
   /** @return leaf_node_size_lower_threshold */
   int GetLeafNodeSizeLowerThreshold() const { return leaf_node_size_lower_threshold_; }
 
-
   // Dont know whether we need to keep Padded Data - so removed that for now.
  public:
   /** @param inner_node_size_upper_threshold upper size threshold for inner node split to be assigned to this tree */
@@ -69,11 +69,7 @@ class BPlusTreeBase {
     leaf_node_size_lower_threshold_ = leaf_node_size_lower_threshold;
   }
 
- private:
-
-
  protected:
-
   /** upper size threshold for inner node split */
   int inner_node_size_upper_threshold_ = INNER_NODE_SIZE_UPPER_THRESHOLD;
   /** lower size threshold for inner node removal */
@@ -88,12 +84,12 @@ class BPlusTreeBase {
   /*
    * Constructor
    */
-  BPlusTreeBase() {}
+  BPlusTreeBase() = default;
 
   /*
    * Destructor
    */
-  ~BPlusTreeBase() {}
+  ~BPlusTreeBase() = default;
 };
 
 /*
@@ -160,7 +156,7 @@ class BPlusTree : public BPlusTreeBase {
   /*
    * enum class NodeType - Bw-Tree node type
    */
-  enum class NodeType : short {
+  enum class NodeType : int {
     InnerType = 0,
     // Data page type
     LeafType = 1
@@ -178,7 +174,7 @@ class BPlusTree : public BPlusTreeBase {
    */
   class KeyNodePointerPairComparator {
    public:
-    const KeyComparator *key_cmp_obj_p;
+    const KeyComparator *key_cmp_obj_p_;
 
     /*
      * Default constructor - deleted
@@ -189,7 +185,7 @@ class BPlusTree : public BPlusTreeBase {
      * Constructor - Initialize a key-NodeID pair comparator using
      *               wrapped key comparator
      */
-    KeyNodePointerPairComparator(BPlusTree *p_tree_p) : key_cmp_obj_p{&p_tree_p->key_cmp_obj} {}
+    explicit KeyNodePointerPairComparator(BPlusTree *p_tree_p) : key_cmp_obj_p_{&p_tree_p->key_cmp_obj_} {}
 
     /*
      * operator() - Compares whether a key NodeID pair is less than another
@@ -197,9 +193,9 @@ class BPlusTree : public BPlusTreeBase {
      * We only compare keys since there should not be duplicated
      * keys inside an inner node
      */
-    inline bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
+    bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
       // First compare keys for relation
-      return (*key_cmp_obj_p)(knp1.first, knp2.first);
+      return (*key_cmp_obj_p_)(knp1.first, knp2.first);
     }
   };
 
@@ -212,7 +208,7 @@ class BPlusTree : public BPlusTreeBase {
    */
   class KeyNodePointerPairEqualityChecker {
    public:
-    const KeyEqualityChecker *key_eq_obj_p;
+    const KeyEqualityChecker *key_eq_obj_p_;
 
     /*
      * Default constructor - deleted
@@ -222,13 +218,13 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Constructor - Initialize a key node pair eq checker
      */
-    KeyNodePointerPairEqualityChecker(BPlusTree *p_tree_p) : key_eq_obj_p{&p_tree_p->key_eq_obj} {}
+    explicit KeyNodePointerPairEqualityChecker(BPlusTree *p_tree_p) : key_eq_obj_p_{&p_tree_p->key_eq_obj_} {}
 
     /*
      * operator() - Compares key-NodeID pair by comparing keys
      */
-    inline bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
-      return (*key_eq_obj_p)(knp1.first, knp2.first);
+    bool operator()(const KeyNodePointerPair &knp1, const KeyNodePointerPair &knp2) const {
+      return (*key_eq_obj_p_)(knp1.first, knp2.first);
     }
   };
 
@@ -237,7 +233,7 @@ class BPlusTree : public BPlusTreeBase {
    */
   class KeyNodePointerPairHashFunc {
    public:
-    const KeyHashFunc *key_hash_obj_p;
+    const KeyHashFunc *key_hash_obj_p_;
 
     /*
      * Default constructor - deleted
@@ -247,7 +243,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Constructor - Initialize a key value pair hash function
      */
-    KeyNodePointerPairHashFunc(BPlusTree *p_tree_p) : key_hash_obj_p{&p_tree_p->key_hash_obj} {}
+    explicit KeyNodePointerPairHashFunc(BPlusTree *p_tree_p) : key_hash_obj_p_{&p_tree_p->key_hash_obj_} {}
 
     /*
      * operator() - Hashes a key-value pair by hashing each part and
@@ -256,7 +252,7 @@ class BPlusTree : public BPlusTreeBase {
      * We use XOR to combine hashes of the key and value together into one
      * single hash value
      */
-    inline size_t operator()(const KeyNodePointerPair &knp) const { return (*key_hash_obj_p)(knp.first); }
+    size_t operator()(const KeyNodePointerPair &knp) const { return (*key_hash_obj_p_)(knp.first); }
   };
 
   ///////////////////////////////////////////////////////////////////
@@ -268,7 +264,7 @@ class BPlusTree : public BPlusTreeBase {
    */
   class KeyValuePairComparator {
    public:
-    const KeyComparator *key_cmp_obj_p;
+    const KeyComparator *key_cmp_obj_p_;
 
     /*
      * Default constructor - deleted
@@ -278,7 +274,7 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Constructor
      */
-    KeyValuePairComparator(BPlusTree *p_tree_p) : key_cmp_obj_p{&p_tree_p->key_cmp_obj} {}
+    explicit KeyValuePairComparator(BPlusTree *p_tree_p) : key_cmp_obj_p_{&p_tree_p->key_cmp_obj_} {}
 
     /*
      * operator() - Compares key-value pair by comparing each component
@@ -287,8 +283,8 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function only compares keys with KeyType. For +/-Inf
      * the wrapped raw key comparator will fail
      */
-    inline bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
-      return (*key_cmp_obj_p)(kvp1.first, kvp2.first);
+    bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
+      return (*key_cmp_obj_p_)(kvp1.first, kvp2.first);
     }
   };
 
@@ -297,8 +293,8 @@ class BPlusTree : public BPlusTreeBase {
    */
   class KeyValuePairEqualityChecker {
    public:
-    const KeyEqualityChecker *key_eq_obj_p;
-    const ValueEqualityChecker *value_eq_obj_p;
+    const KeyEqualityChecker *key_eq_obj_p_;
+    const ValueEqualityChecker *value_eq_obj_p_;
 
     /*
      * Default constructor - deleted
@@ -309,8 +305,8 @@ class BPlusTree : public BPlusTreeBase {
      * Constructor - Initialize a key value pair equality checker with
      *               WrappedKeyEqualityChecker and ValueEqualityChecker
      */
-    KeyValuePairEqualityChecker(BPlusTree *p_tree_p)
-        : key_eq_obj_p{&p_tree_p->key_eq_obj}, value_eq_obj_p{&p_tree_p->value_eq_obj} {}
+    explicit KeyValuePairEqualityChecker(BPlusTree *p_tree_p)
+        : key_eq_obj_p_{&p_tree_p->key_eq_obj_}, value_eq_obj_p_{&p_tree_p->value_eq_obj_} {}
 
     /*
      * operator() - Compares key-value pair by comparing each component
@@ -319,8 +315,8 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function only compares keys with KeyType. For +/-Inf
      * the wrapped raw key comparator will fail
      */
-    inline bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
-      return ((*key_eq_obj_p)(kvp1.first, kvp2.first)) && ((*value_eq_obj_p)(kvp1.second, kvp2.second));
+    bool operator()(const KeyValuePair &kvp1, const KeyValuePair &kvp2) const {
+      return ((*key_eq_obj_p_)(kvp1.first, kvp2.first)) && ((*value_eq_obj_p_)(kvp1.second, kvp2.second));
     }
   };
 
@@ -339,33 +335,33 @@ class BPlusTree : public BPlusTreeBase {
    * been removed from the newest implementation, and this function
    * compares KeyType specified in template argument.
    */
-  inline bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj(key1, key2); }
+  bool KeyCmpLess(const KeyType &key1, const KeyType &key2) const { return key_cmp_obj_(key1, key2); }
 
   /*
    * KeyCmpEqual() - Compare a pair of keys for equality
    *
    * This functions compares keys for equality relation
    */
-  inline bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj(key1, key2); }
+  bool KeyCmpEqual(const KeyType &key1, const KeyType &key2) const { return key_eq_obj_(key1, key2); }
 
   /*
    * KeyCmpGreaterEqual() - Compare a pair of keys for >= relation
    *
    * It negates result of keyCmpLess()
    */
-  inline bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
+  bool KeyCmpGreaterEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpLess(key1, key2); }
 
   /*
    * KeyCmpGreater() - Compare a pair of keys for > relation
    *
    * It flips input for keyCmpLess()
    */
-  inline bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
+  bool KeyCmpGreater(const KeyType &key1, const KeyType &key2) const { return KeyCmpLess(key2, key1); }
 
   /*
    * KeyCmpLessEqual() - Compare a pair of keys for <= relation
    */
-  inline bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
+  bool KeyCmpLessEqual(const KeyType &key1, const KeyType &key2) const { return !KeyCmpGreater(key1, key2); }
 
   ///////////////////////////////////////////////////////////////////
   // Value Comparison Member
@@ -374,8 +370,7 @@ class BPlusTree : public BPlusTreeBase {
   /*
    * ValueCmpEqual() - Compares whether two values are equal
    */
-  inline bool ValueCmpEqual(const ValueType &v1, const ValueType &v2) { return value_eq_obj(v1, v2); }
-
+  bool ValueCmpEqual(const ValueType &v1, const ValueType &v2) { return value_eq_obj_(v1, v2); }
 
   /*
    * class NodeMetaData - Holds node metadata in an object
@@ -400,21 +395,21 @@ class BPlusTree : public BPlusTreeBase {
     // the low key pointer always points to a KeyNodePointerPair structure
     // inside the base node, which is either the first element of the
     // node sep list (InnerNode), or a class member (LeafNode)
-    const KeyNodePointerPair *low_key_p;
+    const KeyNodePointerPair *low_key_p_;
 
     // high key points to the KeyNodePointerPair inside the LeafNode and InnerNode
     // if there is neither SplitNode nor MergeNode. Otherwise it
     // points to the item inside split node or merge right sibling branch
-    const KeyNodePointerPair *high_key_p;
+    const KeyNodePointerPair *high_key_p_;
 
-    // The type of the node; this is forced to be represented as a short type
-    NodeType type;
+    // The type of the node
+    NodeType type_;
 
     // This is the height of the node
-    short depth;
+    int depth_;
 
     // This counts the total number of items in the node
-    int item_count;
+    int item_count_;
 
     // Latch for each node
     std::shared_mutex node_latch_;
@@ -422,15 +417,14 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * Constructor
      */
-    NodeMetaData(const KeyNodePointerPair *p_low_key_p, const KeyNodePointerPair *p_high_key_p, NodeType p_type, int p_depth,
-                 int p_item_count)
-        : low_key_p{p_low_key_p},
-          high_key_p{p_high_key_p},
-          type{p_type},
-          depth{static_cast<short>(p_depth)},
-          item_count{p_item_count} {}
+    NodeMetaData(const KeyNodePointerPair *p_low_key_p, const KeyNodePointerPair *p_high_key_p, NodeType p_type,
+                 int p_depth, int p_item_count)
+        : low_key_p_{p_low_key_p},
+          high_key_p_{p_high_key_p},
+          type_{p_type},
+          depth_{p_depth},
+          item_count_{p_item_count} {}
   };
-
 
   /*
    * class BaseNode - Generic node class; inherited by leaf, inner
@@ -441,29 +435,29 @@ class BPlusTree : public BPlusTreeBase {
     // for member access
    private:
     // This holds low key, high key, next node ID, type, depth and item count
-    NodeMetaData metadata;
+    NodeMetaData metadata_;
 
    public:
     /*
      * Constructor - Initialize type and metadata
      */
-    BaseNode(NodeType p_type, const KeyNodePointerPair *p_low_key_p, const KeyNodePointerPair *p_high_key_p, int p_depth,
-             int p_item_count)
-        : metadata{p_low_key_p, p_high_key_p, p_type, p_depth, p_item_count} {}
+    BaseNode(NodeType p_type, const KeyNodePointerPair *p_low_key_p, const KeyNodePointerPair *p_high_key_p,
+             int p_depth, int p_item_count)
+        : metadata_{p_low_key_p, p_high_key_p, p_type, p_depth, p_item_count} {}
 
     /*
      * Type() - Return the type of node
      *
      * This method does not allow overridding
      */
-    inline NodeType GetType() const { return metadata.type; }
+    NodeType GetType() const { return metadata_.type_; }
 
     /*
      * GetNodeMetaData() - Returns a const reference to node metadata
      *
      * Please do not override this method
      */
-    inline const NodeMetaData &GetNodeMetaData() const { return metadata; }
+    const NodeMetaData &GetNodeMetaData() const { return metadata_; }
 
     /*
      * IsInnerNode() - Returns true if the node is an inner node
@@ -472,16 +466,16 @@ class BPlusTree : public BPlusTreeBase {
      * If the top of delta chain is an inner node then just do not collect
      * and use the node directly
      */
-    inline bool IsInnerNode() const { return GetType() == NodeType::InnerType; }
+    bool IsInnerNode() const { return GetType() == NodeType::InnerType; }
 
-     /*
+    /*
      * GetLowKey() - Returns the low key of the current base node
      *
      * NOTE: Since it is defined that for LeafNode the low key is undefined
      * and pointers should be set to nullptr, accessing the low key of
      * a leaf node would result in Segmentation Fault
      */
-    inline const KeyType &GetLowKey() const { return metadata.low_key_p->first; }
+    const KeyType &GetLowKey() const { return metadata_.low_key_p->first; }
 
     /*
      * GetHighKey() - Returns a reference to the high key of current node
@@ -489,24 +483,24 @@ class BPlusTree : public BPlusTreeBase {
      * This function could be called for all node types including leaf nodes
      * and inner nodes.
      */
-    inline const KeyType &GetHighKey() const { return metadata.high_key_p->first; }
+    const KeyType &GetHighKey() const { return metadata_.high_key_p_->first; }
 
     /*
      * GetHighKeyPair() - Returns the pointer to high key node id pair
      */
-    inline const KeyNodePointerPair &GetHighKeyPair() const { return *metadata.high_key_p; }
+    const KeyNodePointerPair &GetHighKeyPair() const { return *metadata_.high_key_p_; }
 
     /*
      * GetLowKeyPair() - Returns the pointer to low key node id pair
      *
      * The return value is nullptr for LeafNode and its delta chain
      */
-    inline const KeyNodePointerPair &GetLowKeyPair() const { return *metadata.low_key_p; }
+    const KeyNodePointerPair &GetLowKeyPair() const { return *metadata_.low_key_p_; }
 
     /*
      * GetNextNodeID() - Returns the next NodeID of the current node
      */
-    inline BaseNode * GetNextNodeID() const { return metadata.high_key_p->second; }
+    BaseNode *GetNextNodeID() const { return metadata_.high_key_p_->second; }
 
     /*
      * GetLowKeyNodeID() - Returns the NodeID for low key
@@ -514,74 +508,72 @@ class BPlusTree : public BPlusTreeBase {
      * NOTE: This function should not be called for leaf nodes
      * since the low key node ID for leaf node is not defined
      */
-    inline BaseNode * GetLowKeyNodeID() const {
-      return metadata.low_key_p->second;
-    }
+    BaseNode *GetLowKeyNodeID() const { return metadata_.low_key_p_->second; }
 
     /*
      * GetDepth() - Returns the Height of the Node
      */
-    inline int GetDepth() const { return metadata.depth; }
+    int GetDepth() const { return metadata_.depth_; }
 
     /*
      * GetItemCount() - Returns the item count of the current node
      */
-    inline int GetItemCount() const { return metadata.item_count; }
+    int GetItemCount() const { return metadata_.item_count_; }
 
     /*
      * GetNodeExclusiveLatch() - Obtain the exclusive lock to the current node
      */
-    void GetNodeExclusiveLatch() { metadata.node_latch_.lock(); }
+    void GetNodeExclusiveLatch() { metadata_.node_latch_.lock(); }
 
     /*
      * GetNodeSharedLatch() - Obtain the Shared lock to the current node
      */
-    void GetNodeSharedLatch() { metadata.node_latch_.lock_shared(); }
+    void GetNodeSharedLatch() { metadata_.node_latch_.lock_shared(); }
 
     /*
      * ReleaseNodeLatch() - Release the lock to the current node
      */
-    void ReleaseNodeLatch() { metadata.node_latch_.unlock(); }
+    void ReleaseNodeLatch() { metadata_.node_latch_.unlock(); }
 
     /*
      * GetLatchPointer() - Get the Latch Pointer of current node's latch
      */
-    std::shared_mutex * GetLatchPointer() { return &(metadata.node_latch_); }
+    std::shared_mutex *GetLatchPointer() { return &(metadata_.node_latch_); }
 
     /*
      * TryExclusiveLock() - Try to get the exclusive lock
      */
-    bool TryExclusiveLock() { return metadata.node_latch_.try_lock(); }
+    bool TryExclusiveLock() { return metadata_.node_latch_.try_lock(); }
 
     /*
      * TrySharedLock() - Try to get the shared read lock
      */
-    bool TrySharedLock() { return metadata.node_latch_.try_lock_shared(); }
+    bool TrySharedLock() { return metadata_.node_latch_.try_lock_shared(); }
 
     /*
      * SetLowKeyPair() - Sets the low key pair of metadata
      */
-    inline void SetLowKeyPair(const KeyNodePointerPair *p_low_key_p) { metadata.low_key_p = p_low_key_p; }
+    void SetLowKeyPair(const KeyNodePointerPair *p_low_key_p) { metadata_.low_key_p_ = p_low_key_p; }
 
     /*
      * SetHighKeyPair() - Sets the high key pair of metdtata
      */
-    inline void SetHighKeyPair(const KeyNodePointerPair *p_high_key_p) { metadata.high_key_p = p_high_key_p; }
+    void SetHighKeyPair(const KeyNodePointerPair *p_high_key_p) { metadata_.high_key_p_ = p_high_key_p; }
 
     /*
       SetType() - Sets the type of metadata
     */
-    inline void SetType(const NodeType input_type) {metadata.type = input_type;}
+    void SetType(const NodeType input_type) { metadata_.type_ = input_type; }
 
     /*
       SetDepth() - Sets the depth of metadata
     */
-    inline void SetDepth(const short input_depth) {metadata.depth = input_depth;}
+    void SetDepth(const int input_depth) { metadata_.depth_ = input_depth; }
 
     /*
       SetItemCount() - Sets the item_count of metadata
     */
-    inline void SetItemCount(const int input_item_count) {metadata.item_count = input_item_count;}
+    void SetItemCount(const int input_item_count) { metadata_.item_count_ = input_item_count; }
   };
 
   /*
@@ -589,7 +581,7 @@ class BPlusTree : public BPlusTreeBase {
    *                     and LeafNode
    *
    * Since for InnerNode and LeafNode, the number of elements is not a compile
-   * time known constant. However, for efficient tree traversal we must inline
+   * time known constant. However, for efficient tree traversal we must
    * all elements to reduce cache misses with workload that's less predictable
    */
   template <typename ElementType>
@@ -598,16 +590,16 @@ class BPlusTree : public BPlusTreeBase {
     // These two are the low key and high key of the node respectively
     // since we could not add it in the inherited class (will clash with
     // the array which is invisible to the compiler) so they must be added here
-    KeyNodePointerPair low_key;
-    KeyNodePointerPair high_key;
+    KeyNodePointerPair low_key_;
+    KeyNodePointerPair high_key_;
 
     // This is the end of the elastic array
     // We explicitly store it here to avoid calculating the end of the array
     // everytime
-    ElementType *end;
+    ElementType *end_;
 
     // This is the starting point
-    ElementType start[0];
+    ElementType start_[0];
 
    public:
     /*
@@ -616,12 +608,12 @@ class BPlusTree : public BPlusTreeBase {
      * Note that this constructor uses the low key and high key stored as
      * members to initialize the NodeMetadata object in class BaseNode
      */
-    ElasticNode(NodeType p_type, int p_depth, int p_item_count, const KeyNodePointerPair &p_low_key,
-                const KeyNodePointerPair &p_high_key)
-        : BaseNode{p_type, &low_key, &high_key, p_depth, p_item_count},
-          low_key{p_low_key},
-          high_key{p_high_key},
-          end{start} {}
+    ElasticNode(NodeType p_type, int p_depth, int p_item_count, const KeyNodePointerPair *p_low_key,
+                const KeyNodePointerPair *p_high_key)
+        : BaseNode{p_type, &low_key_, &high_key_, p_depth, p_item_count},
+          low_key_{*p_low_key},
+          high_key_{*p_high_key},
+          end_{start_} {}
 
     /*
      * Copy() - Copy constructs another instance
@@ -643,46 +635,44 @@ class BPlusTree : public BPlusTreeBase {
       //   // Manually calls destructor when the node is destroyed
       //   element_p->~ElementType();
       // }
-      ElasticNode *beginningAllocation = this;
-      delete[] reinterpret_cast<char *>(beginningAllocation); 
+      ElasticNode *beginning_allocation = this;
+      delete[] reinterpret_cast<char *>(beginning_allocation);
     }
 
     /*
      IntializeEnd() - Make end = start
     */
-    inline void InitializeEnd() {end = start;}
+    void InitializeEnd() { end_ = start_; }
 
     /*
      SetEnd() - Make end = start + offset
     */
-    inline void SetEnd(int offset) {
-      end = start + offset;
-    }
+    void SetEnd(int offset) { end_ = start_ + offset; }
 
     /*
      * Begin() - Returns a begin iterator to its internal array
      */
-    inline ElementType *Begin() { return start; }
+    ElementType *Begin() { return start_; }
 
     /*
      * RBegin() - Returns a reverse begin iterator to its internal array
      */
-    inline ElementType *RBegin() {
+    ElementType *RBegin() {
+      auto return_value = (end_ - 1);
       if (this->GetSize() == 0) {
-        return NULL;
-      } else {
-        return (end-1);
+        return_value = nullptr;
       }
+      return return_value;
     }
 
-    inline const ElementType *Begin() const { return start; }
+    const ElementType *Begin() const { return start_; }
 
     /*
      * End() - Returns an end iterator that is similar to the one for vector
      */
-    inline ElementType *End() { return end; }
+    ElementType *End() { return end_; }
 
-    inline const ElementType *End() const { return end; }
+    const ElementType *End() const { return end_; }
 
     /*
      * REnd() - Returns the element before the first element
@@ -690,9 +680,9 @@ class BPlusTree : public BPlusTreeBase {
      * Note that since we returned an invalid pointer into the array, the
      * return value should not be modified and is therefore of const type
      */
-    inline const ElementType *REnd() { return start - 1; }
+    const ElementType *REnd() { return start_ - 1; }
 
-    inline const ElementType *REnd() const { return start - 1; }
+    const ElementType *REnd() const { return start_ - 1; }
 
     /*
      * PushBack() - Push back an element
@@ -701,12 +691,12 @@ class BPlusTree : public BPlusTreeBase {
      * which is invisible to the compiler. Therefore we must call placement
      * operator new to do the job
      */
-    inline void PushBack(const ElementType &element) {
+    void PushBack(const ElementType &element) {
       // Placement new + copy constructor using end pointer
-      new (end) ElementType{element};
+      new (end_) ElementType{element};
 
       // Move it pointing to the enxt available slot, if not reached the end
-      end++;
+      end_++;
     }
 
     /*
@@ -714,7 +704,7 @@ class BPlusTree : public BPlusTreeBase {
      *
      * The overloaded PushBack() could also push an array of elements
      */
-    inline void PushBack(const ElementType *copy_start_p, const ElementType *copy_end_p) {
+    void PushBack(const ElementType *copy_start_p, const ElementType *copy_end_p) {
       // Make sure the loop will come to an end
       TERRIER_ASSERT(copy_start_p <= copy_end_p, "Loop will not come to an end.");
 
@@ -725,14 +715,13 @@ class BPlusTree : public BPlusTreeBase {
     }
 
    public:
-
-     /*
-      Print elastic node keys
-    */
+    /*
+     Print elastic node keys
+   */
     void PrintElasticNode() {
       for (ElementType *element_p = Begin(); element_p != End(); element_p++) {
         // Manually calls destructor when the node is destroyed
-        std::cout << element_p->first << " ";
+        // std::cout << element_p->first << " ";
       }
     }
     /*
@@ -740,29 +729,29 @@ class BPlusTree : public BPlusTreeBase {
     Inserts at location provided.
     */
     bool InsertElementIfPossible(const ElementType &element, ElementType *location) {
-      if(GetSize() >= this->GetItemCount()) return false;
-      if(end - location > 0)
-      std::memmove(reinterpret_cast<void *>(location + 1), reinterpret_cast<void *>(location),
-        (end - location)*sizeof(ElementType));
+      if (GetSize() >= this->GetItemCount()) return false;
+      if (end_ - location > 0)
+        std::memmove(reinterpret_cast<void *>(location + 1), reinterpret_cast<void *>(location),
+                     (end_ - location) * sizeof(ElementType));
       new (location) ElementType{element};
-      end = end + 1;
+      end_ = end_ + 1;
       return true;
     }
 
     /*
-    SplitNode - Splits the current node and returns a pointer to the new node. 
-    Returns NULL if node is not already full
+    SplitNode - Splits the current node and returns a pointer to the new node.
+    Returns nullptr if node is not already full
     */
-    ElasticNode * SplitNode() {
-      if(this->GetSize() < this->GetItemCount()) return NULL;
-      ElasticNode * new_node = this->Get(this->GetSize(), this->GetType(), this->GetDepth(),
-        this->GetItemCount(), *this->GetElasticLowKeyPair(), *this->GetElasticHighKeyPair());
-      ElementType * copy_from_location = Begin() + ((this->GetSize()) / 2);
+    ElasticNode *SplitNode() {
+      if (this->GetSize() < this->GetItemCount()) return nullptr;
+      ElasticNode *new_node = this->Get(this->GetSize(), this->GetType(), this->GetDepth(), this->GetItemCount(),
+                                        *this->GetElasticLowKeyPair(), *this->GetElasticHighKeyPair());
+      ElementType *copy_from_location = Begin() + ((this->GetSize()) / 2);
       // Can be memcopy
       std::memmove(reinterpret_cast<void *>(new_node->Begin()), reinterpret_cast<void *>(copy_from_location),
-        (end - copy_from_location)*sizeof(ElementType));
-      new_node->SetEnd((end - copy_from_location));
-      end = copy_from_location;
+                   (end_ - copy_from_location) * sizeof(ElementType));
+      new_node->SetEnd((end_ - copy_from_location));
+      end_ = copy_from_location;
       return new_node;
     }
 
@@ -770,7 +759,7 @@ class BPlusTree : public BPlusTreeBase {
      MergeNode - Merge a given node's entries to the current node.
      Returns true if merge successful, false otherwise
      */
-    bool MergeNode(ElasticNode * next_node) {
+    bool MergeNode(ElasticNode *next_node) {
       // Merge the right type
       if (this->GetType() != next_node->GetType()) {
         return false;
@@ -781,8 +770,8 @@ class BPlusTree : public BPlusTreeBase {
         return false;
       }
 
-      std::memmove(reinterpret_cast<void *>(this->End()),
-        reinterpret_cast<void *>(next_node->Begin()), (next_node->GetSize())*sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(this->End()), reinterpret_cast<void *>(next_node->Begin()),
+                   (next_node->GetSize()) * sizeof(ElementType));
       SetEnd(this->GetSize() + next_node->GetSize());
       return true;
     }
@@ -792,13 +781,13 @@ class BPlusTree : public BPlusTreeBase {
     Returns False if empty
     */
     bool PopBegin() {
-      if(this->GetSize() == 0) return false;
-      if(this->GetSize() == 1) {
+      if (this->GetSize() == 0) return false;
+      if (this->GetSize() == 1) {
         SetEnd(0);
         return true;
       }
-      std::memmove(reinterpret_cast<void *>(start), reinterpret_cast<void *>(start + 1),
-        (this->GetSize() - 1)*sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(start_), reinterpret_cast<void *>(start_ + 1),
+                   (this->GetSize() - 1) * sizeof(ElementType));
       SetEnd(this->GetSize() - 1);
       return true;
     }
@@ -808,8 +797,8 @@ class BPlusTree : public BPlusTreeBase {
     Returns False if empty
     */
     bool PopEnd() {
-      if(this->GetSize() == 0) return false;
-      if(this->GetSize() == 1) {
+      if (this->GetSize() == 0) return false;
+      if (this->GetSize() == 1) {
         SetEnd(0);
         return true;
       }
@@ -822,32 +811,27 @@ class BPlusTree : public BPlusTreeBase {
     Returns False if empty
     */
     bool Erase(int i) {
+      if (this->GetSize() <= i) return false;
 
-      if(this->GetSize() <= i) return false;
-      
-      if(this->GetSize() == 1) {
+      if (this->GetSize() == 1) {
         SetEnd(0);
         return true;
       }
-      std::memmove(reinterpret_cast<void *>(start + i), reinterpret_cast<void *>(start + i + 1),
-        (this->GetSize() - i - 1)*sizeof(ElementType));
+      std::memmove(reinterpret_cast<void *>(start_ + i), reinterpret_cast<void *>(start_ + i + 1),
+                   (this->GetSize() - i - 1) * sizeof(ElementType));
       SetEnd(this->GetSize() - 1);
       return true;
-    }    
+    }
 
     /*
     FindLocation - Returns the start of the first element that compares
     greater to the key provided
     */
-    ElementType * FindLocation(const KeyType &element, BPlusTree * tree) {
-
-      ElementType * iter = Begin();
-      while((iter != end) &&
-        (!tree->KeyCmpGreater(iter->first, element))) iter++;
+    ElementType *FindLocation(const KeyType &element, BPlusTree *tree) {
+      ElementType *iter = Begin();
+      while ((iter != end_) && (!tree->KeyCmpGreater(iter->first, element))) iter++;
       return iter;
     }
-
-
 
     /*
      * GetSize() - Returns the size of the embedded list
@@ -855,26 +839,26 @@ class BPlusTree : public BPlusTreeBase {
      * Note that the return type is integer since we use integer to represent
      * the size of a node
      */
-    inline int GetSize() const { return static_cast<int>(End() - Begin()); }
-     /*
+    int GetSize() const { return static_cast<int>(End() - Begin()); }
+    /*
      * SetElasticLowKeyPair() - Sets the low key of Elastic Node
      */
-    inline void SetElasticLowKeyPair(const KeyNodePointerPair &p_low_key) { low_key = p_low_key; }
+    void SetElasticLowKeyPair(const KeyNodePointerPair &p_low_key) { low_key_ = p_low_key; }
 
     /*
      * SetElasticHighKeyPair() - Sets the high key of Elastic Node
      */
-    inline void SetElasticHighKeyPair(const KeyNodePointerPair &p_high_key) { high_key = p_high_key; }
+    void SetElasticHighKeyPair(const KeyNodePointerPair &p_high_key) { high_key_ = p_high_key; }
 
     /*
      * GetElasticLowKeyPair() - Returns a pointer to the low key current Elastic node
      */
-    inline KeyNodePointerPair *GetElasticLowKeyPair() { return &low_key; }
+    KeyNodePointerPair *GetElasticLowKeyPair() { return &low_key_; }
 
     /*
      * GetElasticHighKeyPair() - Returns a pointer to the high key of current Elastic node
      */
-    inline KeyNodePointerPair *GetElasticHighKeyPair() { return &high_key; }
+    KeyNodePointerPair *GetElasticHighKeyPair() { return &high_key_; }
 
     /*
      * Get() - Static helper function that constructs a elastic node of
@@ -886,11 +870,10 @@ class BPlusTree : public BPlusTreeBase {
      * new to initialize it, such that the node could be freed using operator
      * delete later on
      */
-    inline static ElasticNode *Get(int size,  // Number of elements
-                                   NodeType p_type, int p_depth,
-                                   int p_item_count,  // Usually equal to size
-                                   const KeyNodePointerPair &p_low_key, const KeyNodePointerPair &p_high_key) {
-
+    static ElasticNode *Get(int size,  // Number of elements
+                            NodeType p_type, int p_depth,
+                            int p_item_count,  // Usually equal to size
+                            const KeyNodePointerPair &p_low_key, const KeyNodePointerPair &p_high_key) {
       // Allocte memory for
       //   1. AllocationMeta (chunk)
       //   2. node meta
@@ -910,8 +893,7 @@ class BPlusTree : public BPlusTreeBase {
       // elastic_node->InitializeEnd();
 
       auto elastic_node = reinterpret_cast<ElasticNode *>(alloc_base);
-      new (elastic_node) ElasticNode{p_type, p_depth, p_item_count, p_low_key, p_high_key};
-
+      new (elastic_node) ElasticNode{p_type, p_depth, p_item_count, &p_low_key, &p_high_key};
 
       return elastic_node;
     }
@@ -931,14 +913,14 @@ class BPlusTree : public BPlusTreeBase {
     /*
      * At() - Access element with bounds checking under debug mode
      */
-    inline ElementType &At(const int index) {
+    ElementType &At(const int index) {
       // The index must be inside the valid range
       TERRIER_ASSERT(index < GetSize(), "Index out of range.");
 
       return *(Begin() + index);
     }
 
-    inline const ElementType &At(const int index) const {
+    const ElementType &At(const int index) const {
       // The index must be inside the valid range
       TERRIER_ASSERT(index < GetSize(), "Index out of range.");
 
@@ -988,51 +970,48 @@ class BPlusTree : public BPlusTreeBase {
     ~LeafNode() { this->~ElasticNode<KeyValuePair>(); }
   };
 
-
   // Key comparator
-  const KeyComparator key_cmp_obj;
+  const KeyComparator key_cmp_obj_;
 
   // Raw key eq checker
-  const KeyEqualityChecker key_eq_obj;
+  const KeyEqualityChecker key_eq_obj_;
 
   // Raw key hasher
-  const KeyHashFunc key_hash_obj;
+  const KeyHashFunc key_hash_obj_;
 
   // Check whether values are equivalent
-  const ValueEqualityChecker value_eq_obj;
+  const ValueEqualityChecker value_eq_obj_;
 
   // Hash ValueType into a size_t
-  const ValueHashFunc value_hash_obj;
+  const ValueHashFunc value_hash_obj_;
 
   // The following three are used for std::pair<KeyType, NodeID>
-  const KeyNodePointerPairComparator key_node_id_pair_cmp_obj;
-  const KeyNodePointerPairEqualityChecker key_node_id_pair_eq_obj;
+  const KeyNodePointerPairComparator key_node_id_pair_cmp_obj_;
+  const KeyNodePointerPairEqualityChecker key_node_id_pair_eq_obj_;
 
   // The following two are used for hashing KeyValuePair
-  const KeyValuePairComparator key_value_pair_cmp_obj;
-  const KeyValuePairEqualityChecker key_value_pair_eq_obj;
+  const KeyValuePairComparator key_value_pair_cmp_obj_;
+  const KeyValuePairEqualityChecker key_value_pair_eq_obj_;
 
-  private:
-  BaseNode * root;
-  std::shared_mutex root_latch;
+ private:
+  BaseNode *root_;
+  std::shared_mutex root_latch_;
 
-  public:
-
+ public:
   /*
     Get Root - Returns the current root
   */
-  inline BaseNode * GetRoot() {return root;}
+  BaseNode *GetRoot() { return root_; }
 
   /*
     Get Element
   */
-  inline KeyElementPair GetElement(KeyType key, ValueType value) {
+  KeyElementPair GetElement(KeyType key, ValueType value) {
     KeyElementPair p1;
     p1.first = key;
     p1.second = value;
     return p1;
   }
-
 
   /*
     Tries to find key by Traversing down the BplusTree
@@ -1040,31 +1019,31 @@ class BPlusTree : public BPlusTreeBase {
     Returns false if not found
   */
   bool IsPresent(KeyType key) {
-    if(root == NULL) {
+    if (root_ == nullptr) {
       return false;
     }
 
-    BaseNode * current_node = root;
+    BaseNode *current_node = root_;
 
     // Traversing Down to the right leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       // Note that Find Location returns the location of first element
       // that compare greater than
       auto index_pointer = node->FindLocation(key, this);
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
-      if(index_pointer != node->Begin()) {
+      if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
+      } else {
+        current_node = node->GetLowKeyPair().second;
       }
-      else current_node = node->GetLowKeyPair().second;
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    for (KeyValuePair * element_p = node->Begin();
-      element_p!=node->End(); element_p ++) {
-      if(element_p->first == key) {
+    for (KeyValuePair *element_p = node->Begin(); element_p != node->End(); element_p++) {
+      if (element_p->first == key) {
         return true;
       }
     }
@@ -1077,30 +1056,28 @@ class BPlusTree : public BPlusTreeBase {
     Returns the list of values of the key from leaf if found
     Returns null if not found
   */
-  void FindValueOfKey(KeyType key, std::vector<ValueType>& result) {
+  void FindValueOfKey(KeyType key, std::vector<ValueType> *result) {
+    root_latch_.lock_shared();
 
-    root_latch.lock_shared();
-
-    if(root == NULL) {
-      root_latch.unlock();
+    if (root_ == nullptr) {
+      root_latch_.unlock();
       return;
     }
 
-    BaseNode * current_node = root;
-    BaseNode * parent = NULL;
+    BaseNode *current_node = root_;
+    BaseNode *parent = nullptr;
 
     /*
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.unlock();
+    root_latch_.unlock();
     /*
       Locking Code End
     */
 
-
     // Traversing Down to the right leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       // Note that Find Location returns the location of first element
       // that compare greater than
@@ -1108,12 +1085,12 @@ class BPlusTree : public BPlusTreeBase {
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
       parent = current_node;
-      if(index_pointer != node->Begin()) {
+      if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
+      } else {
+        current_node = node->GetLowKeyPair().second;
       }
-      else current_node = node->GetLowKeyPair().second;
-
 
       /*
         Locking Code
@@ -1126,12 +1103,11 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    for (KeyValuePair * element_p = node->Begin();
-         element_p!=node->End(); element_p ++) {
-      if(KeyCmpEqual(element_p->first,key)) {
+    for (KeyValuePair *element_p = node->Begin(); element_p != node->End(); element_p++) {
+      if (KeyCmpEqual(element_p->first, key)) {
         auto itr_list = element_p->second->begin();
-        while(itr_list != element_p->second->end()) {
-          result.push_back(*itr_list);
+        while (itr_list != element_p->second->end()) {
+          (*result).push_back(*itr_list);
           itr_list++;
         }
 
@@ -1143,102 +1119,89 @@ class BPlusTree : public BPlusTreeBase {
     current_node->ReleaseNodeLatch();
   }
 
-  void PrintTreeNode(BaseNode* node) {
-    if(node->GetType() != NodeType::LeafType) {
-      auto node_elastic = 
-        reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+  void PrintTreeNode(BaseNode *node) {
+    if (node->GetType() != NodeType::LeafType) {
+      auto node_elastic = reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
       node_elastic->PrintElasticNode();
     } else {
-      auto node_elastic = 
-        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);  
+      auto node_elastic = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
       node_elastic->PrintElasticNode();
     }
-    std::cout << '\t';
+    // std::cout << '\t';
   }
 
   /*
     Traverses Down the root in a BFS manner and prints all the nodes
   */
   void PrintTree() {
-    if(root == NULL) return;
+    if (root_ == nullptr) return;
     std::queue<BaseNode *> bfs_queue;
     std::queue<BaseNode *> all_nodes;
-    bfs_queue.push(root);
+    bfs_queue.push(root_);
 
     // print root
-    std::cout << "Printing Root " << std::endl;
-    if(root->GetType() != NodeType::LeafType) {
-      auto root_elastic = 
-        reinterpret_cast<ElasticNode<KeyValuePair> *>(root);
+    // std::cout << "Printing Root " << std::endl;
+    if (root_->GetType() != NodeType::LeafType) {
+      auto root_elastic = reinterpret_cast<ElasticNode<KeyValuePair> *>(root_);
       root_elastic->PrintElasticNode();
     } else {
-      auto root_elastic = 
-        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);  
+      auto root_elastic = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
       root_elastic->PrintElasticNode();
     }
 
-    while(!bfs_queue.empty()) {
-      BaseNode * node = bfs_queue.front();
+    while (!bfs_queue.empty()) {
+      BaseNode *node = bfs_queue.front();
       bfs_queue.pop();
       all_nodes.push(node);
-      if(node->GetType() != NodeType::LeafType) {
-        std::cout << "printing children " << std::endl;
+      if (node->GetType() != NodeType::LeafType) {
+        // std::cout << "printing children " << std::endl;
 
         bfs_queue.push(node->GetLowKeyPair().second);
         PrintTreeNode(node->GetLowKeyPair().second);
 
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
-        for (KeyNodePointerPair * element_p = current_node->Begin();
-          element_p!=current_node->End(); element_p ++) {
+        auto current_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair *element_p = current_node->Begin(); element_p != current_node->End(); element_p++) {
           bfs_queue.push(element_p->second);
           PrintTreeNode(element_p->second);
         }
       }
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
   }
 
   /*
     Traverses Down the root in a BFS manner and frees all the nodes
   */
   void FreeTree() {
-    if(root == NULL) return;
+    if (root_ == nullptr) return;
     std::queue<BaseNode *> bfs_queue;
     std::queue<BaseNode *> all_nodes;
-    bfs_queue.push(root);
+    bfs_queue.push(root_);
 
-    while(!bfs_queue.empty()) {
-      BaseNode * node = bfs_queue.front();
+    while (!bfs_queue.empty()) {
+      BaseNode *node = bfs_queue.front();
       bfs_queue.pop();
       all_nodes.push(node);
-      if(node->GetType() != NodeType::LeafType) {
+      if (node->GetType() != NodeType::LeafType) {
         bfs_queue.push(node->GetLowKeyPair().second);
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
-        for (KeyNodePointerPair * element_p = current_node->Begin();
-          element_p!=current_node->End(); element_p ++) {
+        auto current_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair *element_p = current_node->Begin(); element_p != current_node->End(); element_p++) {
           bfs_queue.push(element_p->second);
         }
       }
     }
 
-    while(!all_nodes.empty()) {
-      BaseNode * node = all_nodes.front();
+    while (!all_nodes.empty()) {
+      BaseNode *node = all_nodes.front();
       all_nodes.pop();
-      if(node->GetType() != NodeType::LeafType) {
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+      if (node->GetType() != NodeType::LeafType) {
+        auto current_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
         current_node->FreeElasticNode();
       } else {
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
-        for (KeyValuePair * element_p = current_node->Begin();
-             element_p!=current_node->End(); element_p ++) {
-          if(element_p->second != NULL) {
-            // destroy the list of values in a key
-            delete element_p->second;
-          }
+        auto current_node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+        for (KeyValuePair *element_p = current_node->Begin(); element_p != current_node->End(); element_p++) {
+          // destroy the list of values in a key
+          delete element_p->second;
         }
         current_node->FreeElasticNode();
       }
@@ -1252,48 +1215,43 @@ class BPlusTree : public BPlusTreeBase {
   the size of each node.
   Also erases all keys that are found in the tree from the input set
   */
-  bool StructuralIntegrityVerification(KeyType low_key, KeyType high_key, std::set<KeyType> &keys,
-    BaseNode * current_node) {
-
+  bool StructuralIntegrityVerification(KeyType low_key, KeyType high_key, std::set<KeyType> *keys,
+                                       BaseNode *current_node) {
     bool return_answer = true;
-    if(current_node->GetType() == NodeType::LeafType) {
+    if (current_node->GetType() == NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-      for (KeyValuePair * element_p = node->Begin();
-        element_p!=node->End(); element_p ++) {
+      for (KeyValuePair *element_p = node->Begin(); element_p != node->End(); element_p++) {
         /* All Keys within Range*/
-        if(this->KeyCmpGreater(low_key, element_p->first) ||
-          this->KeyCmpGreater(element_p->first, high_key)) {
+        if (this->KeyCmpGreater(low_key, element_p->first) || this->KeyCmpGreater(element_p->first, high_key)) {
           return false;
         }
         /* Size of Node is correct */
-        if(current_node != root)
-        if(node->GetSize() < leaf_node_size_lower_threshold_ ||
-          node->GetSize() > leaf_node_size_upper_threshold_) {
-          return false;
+        if (current_node != root_) {
+          if (node->GetSize() < leaf_node_size_lower_threshold_ || node->GetSize() > leaf_node_size_upper_threshold_) {
+            return false;
+          }
         }
-        keys.erase(element_p->first);
+        (*keys).erase(element_p->first);
       }
     } else {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       /* Size of Node is correct */
-      if(current_node != root)
-      if(node->GetSize() < inner_node_size_lower_threshold_ || 
-        node->GetSize() > inner_node_size_upper_threshold_) {
-        return false;
+      if (current_node != root_) {
+        if (node->GetSize() < inner_node_size_lower_threshold_ || node->GetSize() > inner_node_size_upper_threshold_) {
+          return false;
+        }
       }
       return_answer &= this->StructuralIntegrityVerification(low_key, node->Begin()->first, keys,
-        current_node->GetLowKeyPair().second);
+                                                             current_node->GetLowKeyPair().second);
 
-      KeyNodePointerPair * iter = node->Begin();
-      while((iter + 1) != node->End()) {
-        low_key = iter->first; 
-        return_answer &= this->StructuralIntegrityVerification(low_key, (iter + 1)->first, keys,
-        iter->second);
+      KeyNodePointerPair *iter = node->Begin();
+      while ((iter + 1) != node->End()) {
+        low_key = iter->first;
+        return_answer &= this->StructuralIntegrityVerification(low_key, (iter + 1)->first, keys, iter->second);
         iter++;
       }
 
-      return_answer &= this->StructuralIntegrityVerification(iter->first, high_key, keys,
-        iter->second);
+      return_answer &= this->StructuralIntegrityVerification(iter->first, high_key, keys, iter->second);
     }
     return return_answer;
   }
@@ -1305,36 +1263,36 @@ class BPlusTree : public BPlusTreeBase {
     sorted key set for their order. Verifies if a full scan (ascending) using the siblings
     is correct or not.
   */
-  bool SiblingForwardCheck(std::set<KeyType> &keys) {
-    KeyType key = *keys.begin();
-    if(root == NULL) {
+  bool SiblingForwardCheck(std::set<KeyType> *keys) {
+    KeyType key = *(*keys).begin();
+    if (root_ == nullptr) {
       return false;
     }
 
-    BaseNode * current_node = root;
+    BaseNode *current_node = root_;
 
     // Traversing Down to the right leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       // Note that Find Location returns the location of first element
       // that compare greater than
       auto index_pointer = node->FindLocation(key, this);
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
-      if(index_pointer != node->Begin()) {
+      if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
+      } else {
+        current_node = node->GetLowKeyPair().second;
       }
-      else current_node = node->GetLowKeyPair().second;
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    auto itr = keys.begin();
-    while(node != NULL) {
+    auto itr = (*keys).begin();
+    while (node != nullptr) {
       // iterate over all the values in the leaf node checking with the key set
-      for (KeyValuePair * element_p = node->Begin();
-           element_p!=node->End(); element_p++) {
-        if(element_p->first != *itr) {
+      for (KeyValuePair *element_p = node->Begin(); element_p != node->End(); element_p++) {
+        if (element_p->first != *itr) {
           return false;
         }
         itr++;
@@ -1352,36 +1310,36 @@ class BPlusTree : public BPlusTreeBase {
     sorted key set for their order. Verifies if a full scan (descending) using the siblings
     is correct or not.
   */
-  bool SiblingBackwardCheck(std::set<KeyType> &keys) {
-    KeyType key = *keys.rbegin();
-    if(root == NULL) {
+  bool SiblingBackwardCheck(std::set<KeyType> *keys) {
+    KeyType key = *(*keys).rbegin();
+    if (root_ == nullptr) {
       return false;
     }
 
-    BaseNode * current_node = root;
+    BaseNode *current_node = root_;
 
     // Traversing Down to the right leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       // Note that Find Location returns the location of first element
       // that compare greater than
       auto index_pointer = node->FindLocation(key, this);
       // Thus we have to go in the left side of location which will be the
       // pointer of the previous location.
-      if(index_pointer != node->Begin()) {
+      if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
+      } else {
+        current_node = node->GetLowKeyPair().second;
       }
-      else current_node = node->GetLowKeyPair().second;
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    auto itr = keys.rbegin();
-    while(node != NULL) {
+    auto itr = (*keys).rbegin();
+    while (node != nullptr) {
       // iterate over all the values in the leaf node checking with the key set
-      for (KeyValuePair * element_p = node->End()-1;
-           element_p!=node->REnd(); element_p--) {
-        if(element_p->first != *itr) {
+      for (KeyValuePair *element_p = node->End() - 1; element_p != node->REnd(); element_p--) {
+        if (element_p->first != *itr) {
           return false;
         }
         itr++;
@@ -1398,24 +1356,31 @@ class BPlusTree : public BPlusTreeBase {
    * check if the values_list in the tree have the same values as the map given
    * in the function.
    */
-  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::set<ValueType> >& keys_values) {
-    auto itr = keys_values.begin();
-    for(;itr!=keys_values.end();itr++) {
+  bool DuplicateKeyValuesCheck(std::unordered_map<KeyType, std::set<ValueType>> *keys_values) {
+    auto itr = (*keys_values).begin();
+    for (; itr != (*keys_values).end(); itr++) {
       KeyType k = itr->first;
-      std::set<ValueType> values = keys_values[k];
+      std::set<ValueType> values = (*keys_values)[k];
       std::vector<ValueType> result;
-      FindValueOfKey(k, result);
-      if(result.size() == 0) {
+      FindValueOfKey(k, &result);
+      if (result.empty()) {
         return false;
       }
-      for(auto it = result.begin(); it != result.end(); it++) {
-        if(values.count(*(it)) == 0) {
-          return false;
+      bool return_value = true;
+      for (auto it = result.begin(); it != result.end(); it++) {
+        if (!(return_value)) {
+          break;
+        }
+        if (values.count(*(it)) == 0) {
+          return_value = false;
         } else {
           values.erase(*(it));
         }
       }
-      if (values.size() != 0) {
+      if (!(return_value)) {
+        return return_value;
+      }
+      if (!values.empty()) {
         return false;
       }
     }
@@ -1428,21 +1393,21 @@ class BPlusTree : public BPlusTreeBase {
    * transaction in insert unique. The check ensures that the values list
    * in the B+ tree also have the same keys and the same order.
    */
-  bool DuplicateKeyValueUniqueInsertCheck(std::unordered_map<KeyType, std::vector<ValueType> >& keys_values) {
-    auto itr = keys_values.begin();
-    for(;itr!=keys_values.end();itr++) {
+  bool DuplicateKeyValueUniqueInsertCheck(std::unordered_map<KeyType, std::vector<ValueType>> *keys_values) {
+    auto itr = (*keys_values).begin();
+    for (; itr != (*keys_values).end(); itr++) {
       KeyType k = itr->first;
-      std::vector<ValueType> values = keys_values[k];
-      std::list<ValueType> * values_list_p = FindValueOfKey(k);
-      if(values_list_p == NULL) {
+      std::vector<ValueType> values = (*keys_values)[k];
+      std::list<ValueType> *values_list_p = FindValueOfKey(k);
+      if (values_list_p == nullptr) {
         return false;
       }
       auto it_list = values_list_p->begin();
-      for(unsigned j = 0; j != values.size(); j++) {
+      for (unsigned j = 0; j != values.size(); j++) {
         if (it_list == values_list_p->end()) {
           return false;
         }
-        if(values[j] != *(it_list)) {
+        if (values[j] != *(it_list)) {
           return false;
         }
         it_list++;
@@ -1455,45 +1420,39 @@ class BPlusTree : public BPlusTreeBase {
   Returns current heap usage
   */
   size_t GetHeapUsage() {
-
-    root_latch.lock();
-    if(root == NULL) return 0;
+    root_latch_.lock();
+    if (root_ == nullptr) return 0;
 
     std::queue<BaseNode *> bfs_queue;
     std::queue<BaseNode *> all_nodes;
-    bfs_queue.push(root);
+    bfs_queue.push(root_);
 
-    while(!bfs_queue.empty()) {
-      BaseNode * node = bfs_queue.front();
+    while (!bfs_queue.empty()) {
+      BaseNode *node = bfs_queue.front();
       bfs_queue.pop();
       all_nodes.push(node);
-      if(node->GetType() != NodeType::LeafType) {
+      if (node->GetType() != NodeType::LeafType) {
         bfs_queue.push(node->GetLowKeyPair().second);
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
-        for (KeyNodePointerPair * element_p = current_node->Begin();
-          element_p!=current_node->End(); element_p ++) {
+        auto current_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        for (KeyNodePointerPair *element_p = current_node->Begin(); element_p != current_node->End(); element_p++) {
           bfs_queue.push(element_p->second);
         }
       }
     }
 
     size_t heap_size = 0;
-    while(!all_nodes.empty()) {
-      BaseNode * node = all_nodes.front();
+    while (!all_nodes.empty()) {
+      BaseNode *node = all_nodes.front();
       all_nodes.pop();
-      if(node->GetType() != NodeType::LeafType) {
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
-        // TODO: Little bit wrong
+      if (node->GetType() != NodeType::LeafType) {
+        auto current_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(node);
+        // TODO(rohanagg): Little bit wrong
         heap_size += sizeof(BaseNode) + current_node->GetSize() * sizeof(KeyNodePointerPair);
       } else {
-        auto current_node = 
-          reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
+        auto current_node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node);
         heap_size += sizeof(BaseNode) + current_node->GetSize() * sizeof(KeyValuePair);
-        for (KeyValuePair * element_p = current_node->Begin();
-             element_p!=current_node->End(); element_p ++) {
-          if(element_p->second != NULL) {
+        for (KeyValuePair *element_p = current_node->Begin(); element_p != current_node->End(); element_p++) {
+          if (element_p->second != nullptr) {
             // destroy the list of values in a key
             heap_size += element_p->second->size() * sizeof(ValueType);
           }
@@ -1503,38 +1462,36 @@ class BPlusTree : public BPlusTreeBase {
     return heap_size;
   }
 
-
   /*
     Scan Ascending - Duplicates the Scan Ascending Behaviour in bwtree_index.h
   */
   void ScanAscending(KeyType index_low_key, KeyType index_high_key, bool low_key_exists, uint32_t num_attrs,
-    bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list, const IndexMetadata *metadata) {
-    
-    root_latch.lock_shared();
+                     bool high_key_exists, uint32_t limit, std::vector<TupleSlot> *value_list,
+                     const IndexMetadata *metadata) {
+    root_latch_.lock_shared();
 
-    if(root == NULL) {
-      root_latch.unlock();
+    if (root_ == nullptr) {
+      root_latch_.unlock();
       return;
     }
 
-    BaseNode * current_node = root;
-    BaseNode * parent = NULL;
+    BaseNode *current_node = root_;
+    BaseNode *parent = nullptr;
     /*
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.unlock();
+    root_latch_.unlock();
     /*
       Locking Code End
     */
 
     // Traversing Down to the correct leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
-
+    while (current_node->GetType() != NodeType::LeafType) {
       // Set parent for releasing the lock
       parent = current_node;
 
-      if(low_key_exists) {
+      if (low_key_exists) {
         auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
         // Note that Find Location returns the location of first element
         // that compare greater than
@@ -1542,11 +1499,12 @@ class BPlusTree : public BPlusTreeBase {
         // Thus we have to go in the left side of location which will be the
         // pointer of the previous location.
 
-        if(index_pointer != node->Begin()) {
+        if (index_pointer != node->Begin()) {
           index_pointer -= 1;
           current_node = index_pointer->second;
+        } else {
+          current_node = node->GetLowKeyPair().second;
         }
-        else current_node = node->GetLowKeyPair().second;
       } else {
         current_node = current_node->GetLowKeyPair().second;
       }
@@ -1561,15 +1519,15 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    KeyValuePair * element_p;
-    if(low_key_exists) {
+    KeyValuePair *element_p;
+    if (low_key_exists) {
       element_p = node->FindLocation(index_low_key, this);
-      if(element_p != node->Begin()) {
-        if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
-          element_p --;
+      if (element_p != node->Begin()) {
+        if (KeyCmpEqual((element_p - 1)->first, index_low_key)) {
+          element_p--;
         }
-        if(element_p == node->End()) {
-          if(node->GetHighKeyPair().second == NULL) {
+        if (element_p == node->End()) {
+          if (node->GetHighKeyPair().second == nullptr) {
             current_node->ReleaseNodeLatch();
             return;
           }
@@ -1586,25 +1544,23 @@ class BPlusTree : public BPlusTreeBase {
           */
           element_p = node->Begin();
         }
-
-      } 
+      }
     } else {
       element_p = node->Begin();
     }
 
     while ((limit == 0 || value_list->size() < limit) &&
-      (!high_key_exists || element_p->first.PartialLessThan(index_high_key, metadata, num_attrs))) {
-      
+           (!high_key_exists || element_p->first.PartialLessThan(index_high_key, metadata, num_attrs))) {
       auto itr_list = element_p->second->begin();
-      while(itr_list != element_p->second->end()) {
+      while (itr_list != element_p->second->end()) {
         value_list->push_back(*itr_list);
-        if(!(limit == 0 || value_list->size() < limit)) break;
+        if (!(limit == 0 || value_list->size() < limit)) break;
         itr_list++;
       }
 
       element_p++;
-      if(element_p == node->End()) {
-        if(node->GetHighKeyPair().second == NULL) break;
+      if (element_p == node->End()) {
+        if (node->GetHighKeyPair().second == nullptr) break;
         parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetHighKeyPair().second);
         current_node = node;
@@ -1621,72 +1577,71 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     current_node->ReleaseNodeLatch();
-
-    return;
   }
 
   /*
     Scan Descending - Duplicates the Scan Descending Behaviour in bwtree_index.h
   */
   bool ScanDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list) {
+    root_latch_.lock_shared();
 
-    root_latch.lock_shared();
-
-    if(root == NULL) {
-      root_latch.unlock();
+    if (root_ == nullptr) {
+      root_latch_.unlock();
       return true;
     }
 
-    BaseNode * current_node = root;
-    BaseNode * parent = NULL;
+    BaseNode *current_node = root_;
+    BaseNode *parent = nullptr;
     /*
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.unlock();
+    root_latch_.unlock();
     /*
       Locking Code End
     */
 
     // Traversing Down to the right leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(index_high_key, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
 
-        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-        // Note that Find Location returns the location of first element
-        // that compare greater than
-        auto index_pointer = node->FindLocation(index_high_key, this);
-        // Thus we have to go in the left side of location which will be the
-        // pointer of the previous location.
+      // set parent for crabbing
+      parent = node;
 
-        // set parent for crabbing
-        parent = node;
-
-        if(index_pointer != node->Begin()) {
-          index_pointer -= 1;
-          current_node = index_pointer->second;
-        }
-        else current_node = node->GetLowKeyPair().second;
-        /*
-        Locking Code
-        */
-        current_node->GetNodeSharedLatch();
-        parent->ReleaseNodeLatch();
-        /*
-        Locking Code End
-        */
+      if (index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      } else {
+        current_node = node->GetLowKeyPair().second;
+      }
+      /*
+      Locking Code
+      */
+      current_node->GetNodeSharedLatch();
+      parent->ReleaseNodeLatch();
+      /*
+      Locking Code End
+      */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    KeyValuePair * element_p;
+    KeyValuePair *element_p;
     element_p = node->FindLocation(index_high_key, this);
-    if(element_p != node->Begin()) {
+
+    bool reach_end = false;
+    if (element_p != node->Begin()) {
       // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
-      element_p --;
+      element_p--;
       // }
     } else {
-      if(node->GetLowKeyPair().second == NULL) {
+      if (node->GetLowKeyPair().second == nullptr) {
         current_node->ReleaseNodeLatch();
-        return true;
+        reach_end = true;
       } else {
         parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
@@ -1700,19 +1655,21 @@ class BPlusTree : public BPlusTreeBase {
       }
     }
 
-    while(KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+    if (reach_end) {
+      return true;
+    }
 
+    while (KeyCmpGreaterEqual(element_p->first, index_low_key)) {
       auto itr_list = element_p->second->begin();
-      while(itr_list != element_p->second->end()) {
-
+      while (itr_list != element_p->second->end()) {
         value_list->push_back(*itr_list);
         itr_list++;
       }
 
       element_p--;
-      if(element_p == node->Begin() - 1) {
+      if (element_p == node->Begin() - 1) {
         parent = node;
-        if(node->GetLowKeyPair().second == NULL) break;
+        if (node->GetLowKeyPair().second == nullptr) break;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
         current_node = node;
         if (!(current_node->TrySharedLock())) {
@@ -1732,65 +1689,66 @@ class BPlusTree : public BPlusTreeBase {
     Scan Limit Descending - Duplicates the Scan Limit Descending Behaviour in bwtree_index.h
   */
   bool ScanLimitDescending(KeyType index_low_key, KeyType index_high_key, std::vector<TupleSlot> *value_list,
-    uint32_t limit) {
+                           uint32_t limit) {
+    root_latch_.lock_shared();
 
-    root_latch.lock_shared();
-
-    if(root == NULL) {
-      root_latch.unlock();
+    if (root_ == nullptr) {
+      root_latch_.unlock();
       return true;
     }
 
-    BaseNode * current_node = root;
-    BaseNode * parent = NULL;
+    BaseNode *current_node = root_;
+    BaseNode *parent = nullptr;
     /*
         Locking Code
     */
     current_node->GetNodeSharedLatch();
-    root_latch.unlock();
+    root_latch_.unlock();
     /*
       Locking Code End
     */
 
     // Traversing Down to the right leaf node
-    while(current_node->GetType() != NodeType::LeafType) {
+    while (current_node->GetType() != NodeType::LeafType) {
+      auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
+      // Note that Find Location returns the location of first element
+      // that compare greater than
+      auto index_pointer = node->FindLocation(index_high_key, this);
+      // Thus we have to go in the left side of location which will be the
+      // pointer of the previous location.
 
-        auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
-        // Note that Find Location returns the location of first element
-        // that compare greater than
-        auto index_pointer = node->FindLocation(index_high_key, this);
-        // Thus we have to go in the left side of location which will be the
-        // pointer of the previous location.
+      // set parent for crabbing
+      parent = node;
+      if (index_pointer != node->Begin()) {
+        index_pointer -= 1;
+        current_node = index_pointer->second;
+      } else {
+        current_node = node->GetLowKeyPair().second;
+      }
 
-        // set parent for crabbing
-        parent = node;
-        if(index_pointer != node->Begin()) {
-          index_pointer -= 1;
-          current_node = index_pointer->second;
-        }
-        else current_node = node->GetLowKeyPair().second;
-
-        /*
-        Locking Code
-        */
-        current_node->GetNodeSharedLatch();
-        parent->ReleaseNodeLatch();
-        /*
-        Locking Code End
-        */
+      /*
+      Locking Code
+      */
+      current_node->GetNodeSharedLatch();
+      parent->ReleaseNodeLatch();
+      /*
+      Locking Code End
+      */
     }
 
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
-    KeyValuePair * element_p;
+    KeyValuePair *element_p;
     element_p = node->FindLocation(index_high_key, this);
-    if(element_p != node->Begin()) {
+
+    bool reach_end = false;
+    if (element_p != node->Begin()) {
       // if(KeyCmpEqual((element_p - 1)->first, index_low_key)) {
-      element_p --;
+      element_p--;
       // }
     } else {
-      if(node->GetLowKeyPair().second == NULL) {
+      if (node->GetLowKeyPair().second == nullptr) {
         current_node->ReleaseNodeLatch();
-        return true;
+        reach_end = true;
       } else {
         parent = node;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
@@ -1804,19 +1762,22 @@ class BPlusTree : public BPlusTreeBase {
       }
     }
 
-    while((value_list->size() < limit) && KeyCmpGreaterEqual(element_p->first, index_low_key)) {
+    if (reach_end) {
+      return true;
+    }
 
+    while ((value_list->size() < limit) && KeyCmpGreaterEqual(element_p->first, index_low_key)) {
       auto itr_list = element_p->second->begin();
-      while(itr_list != element_p->second->end()) {
+      while (itr_list != element_p->second->end()) {
         value_list->push_back(*itr_list);
-        if(value_list->size() >= limit) break;
+        if (value_list->size() >= limit) break;
         itr_list++;
       }
 
       element_p--;
-      if(element_p == node->Begin() - 1) {
+      if (element_p == node->Begin() - 1) {
         parent = node;
-        if(node->GetLowKeyPair().second == NULL) break;
+        if (node->GetLowKeyPair().second == nullptr) break;
         node = reinterpret_cast<ElasticNode<KeyValuePair> *>(node->GetLowKeyPair().second);
         current_node = node;
         if (!(current_node->TrySharedLock())) {
@@ -1832,19 +1793,17 @@ class BPlusTree : public BPlusTreeBase {
     return true;
   }
 
-  bool ReleaseAllLocks(std::vector<BaseNode *> &node_list, bool got_root_latch) {
-    while(!node_list.empty()) {
-      (*node_list.rbegin())->ReleaseNodeLatch();
-      node_list.pop_back();
+  bool ReleaseAllLocks(std::vector<BaseNode *> *node_list, bool got_root_latch) {
+    while (!node_list->empty()) {
+      (*node_list->rbegin())->ReleaseNodeLatch();
+      node_list->pop_back();
     }
-    if(got_root_latch) {
+    if (got_root_latch) {
       got_root_latch = false;
-      root_latch.unlock();
+      root_latch_.unlock();
     }
     return got_root_latch;
   }
-
-
 
   /*
     Insert - adds element in the tree
@@ -1857,27 +1816,26 @@ class BPlusTree : public BPlusTreeBase {
     /*
      ****************************
       First try optimistic insert
-     **************************** 
+     ****************************
     */
-    /* If root is NULL then we make a Leaf Node.
+    /* If root is nullptr then we make a Leaf Node.
      */
-    root_latch.lock();
+    root_latch_.lock();
 
-    if (root == NULL) {
+    if (root_ == nullptr) {
       KeyNodePointerPair p1, p2;
       p1.first = element.first;
       p2.first = element.first;
-      p1.second = NULL;
-      p2.second = NULL;
+      p1.second = nullptr;
+      p2.second = nullptr;
 
-      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
-                                            leaf_node_size_upper_threshold_, p1, p2);
+      root_ = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
+                                             leaf_node_size_upper_threshold_, p1, p2);
     }
     // beyond this point we'll have exclusive_lock on tree lock
 
-    BaseNode *current_node = root;
+    BaseNode *current_node = root_;
     BaseNode *parent_node = nullptr;
-
 
     /*
       Locking Code
@@ -1891,7 +1849,6 @@ class BPlusTree : public BPlusTreeBase {
     while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
 
-
       /*
         Locking Code
         Release parent's shared lock
@@ -1899,20 +1856,17 @@ class BPlusTree : public BPlusTreeBase {
       if (parent_node != nullptr) {
         parent_node->ReleaseNodeLatch();
       } else {
-        root_latch.unlock();
+        root_latch_.unlock();
       }
       // if(node->GetSize() < node->GetItemCount()) {
       //   got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
-      // } 
+      // }
       /*
         Locking Code End
       */
 
-
-
-
       // node_list.push_back(current_node);
-      
+
       // Note that Find Location returns the location of first element
       // that compare greater than
       auto index_pointer = node->FindLocation(element.first, this);
@@ -1926,7 +1880,6 @@ class BPlusTree : public BPlusTreeBase {
         parent_node = current_node;
         current_node = node->GetLowKeyPair().second;
       }
-
 
       /*
         Locking Code
@@ -1950,14 +1903,12 @@ class BPlusTree : public BPlusTreeBase {
     if (parent_node != nullptr) {
       parent_node->ReleaseNodeLatch();
     } else {
-      root_latch.unlock();
+      root_latch_.unlock();
     }
     /*
       Locking Code End
       Beyond this we only have exclusive latch on the current_node
     */
-
-
 
     bool finished_insertion = false;
     // We maintain the element that we have to recursively insert up.
@@ -1966,19 +1917,18 @@ class BPlusTree : public BPlusTreeBase {
 
     auto location_greater_key_leaf = node->FindLocation(element.first, this);
     if (location_greater_key_leaf != node->Begin()) {
-      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+      if (KeyCmpEqual((location_greater_key_leaf - 1)->first, element.first)) {
         // Key present in tree => insert into value list
         auto itr_list = (location_greater_key_leaf - 1)->second->begin();
-        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
-          if(ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
-
+        while (itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if (ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
             /*
               Release all locks if the value is already present
             */
             current_node->ReleaseNodeLatch();
             /*
               Locking Code End
-  
+
             */
             return false;
           }
@@ -1995,11 +1945,11 @@ class BPlusTree : public BPlusTreeBase {
         */
 
         finished_insertion = true;
-      }  
-    } 
-    
-    // Insertion not done yet as key is not present 
-    if(!finished_insertion) {
+      }
+    }
+
+    // Insertion not done yet as key is not present
+    if (!finished_insertion) {
       auto value_list = new std::list<ValueType>();
       value_list->push_back(element.second);
       KeyValuePair key_list_value;
@@ -2022,9 +1972,7 @@ class BPlusTree : public BPlusTreeBase {
       // Optimistic approach failed
     }
 
-    if (finished_insertion){
-      return true;
-    } else {
+    if (!finished_insertion) {
       // Pessimistic approach failed
       /*
       Locking Code
@@ -2033,41 +1981,40 @@ class BPlusTree : public BPlusTreeBase {
       /*
         Locking Code End
       */
-    } 
+    } else {
+      return true;
+    }
 
     /*
      ****************************************
       if not successful -> pessimistic insert
-     **************************************** 
+     ****************************************
     */
 
-    /* If root is NULL then we make a Leaf Node.
+    /* If root is nullptr then we make a Leaf Node.
      */
-    root_latch.lock();
+    root_latch_.lock();
     bool got_root_latch = true;
 
-    if (root == NULL) {
+    if (root_ == nullptr) {
       KeyNodePointerPair p1, p2;
       p1.first = element.first;
       p2.first = element.first;
-      p1.second = NULL;
-      p2.second = NULL;
-      root = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
-                                            leaf_node_size_upper_threshold_, p1, p2);
+      p1.second = nullptr;
+      p2.second = nullptr;
+      root_ = ElasticNode<KeyValuePair>::Get(leaf_node_size_upper_threshold_, NodeType::LeafType, 0,
+                                             leaf_node_size_upper_threshold_, p1, p2);
     }
 
-
-    current_node = root;
-
+    current_node = root_;
 
     /*
       Locking Code
     */
-      current_node->GetNodeExclusiveLatch();
+    current_node->GetNodeExclusiveLatch();
     /*
       Locking Code End
     */
-
 
     // Stack of pointers
     std::vector<BaseNode *> node_list;
@@ -2076,19 +2023,15 @@ class BPlusTree : public BPlusTreeBase {
     while (current_node->GetType() != NodeType::LeafType) {
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
 
-
       /*
         Locking Code
       */
-      if(node->GetSize() < node->GetItemCount()) {
-        got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
-      } 
+      if (node->GetSize() < node->GetItemCount()) {
+        got_root_latch = ReleaseAllLocks(&node_list, got_root_latch);
+      }
       /*
         Locking Code End
       */
-
-
-
 
       node_list.push_back(current_node);
       // Note that Find Location returns the location of first element
@@ -2099,9 +2042,9 @@ class BPlusTree : public BPlusTreeBase {
       if (index_pointer != node->Begin()) {
         index_pointer -= 1;
         current_node = index_pointer->second;
-      } else
+      } else {
         current_node = node->GetLowKeyPair().second;
-
+      }
 
       /*
         Locking Code
@@ -2112,8 +2055,6 @@ class BPlusTree : public BPlusTreeBase {
       */
     }
 
-
-
     finished_insertion = false;
     // We maintain the element that we have to recursively insert up.
     // This is the element that has to be inserted into the inner nodes.
@@ -2122,21 +2063,19 @@ class BPlusTree : public BPlusTreeBase {
 
     location_greater_key_leaf = node->FindLocation(element.first, this);
     if (location_greater_key_leaf != node->Begin()) {
-      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
-
+      if (KeyCmpEqual((location_greater_key_leaf - 1)->first, element.first)) {
         auto itr_list = (location_greater_key_leaf - 1)->second->begin();
-        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
-          if(ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
-
+        while (itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if (ValueCmpEqual(*itr_list, element.second) || predicate(*itr_list)) {
             /*
               Release all locks if the value is already present
             */
             current_node->ReleaseNodeLatch();
-            got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+            got_root_latch = ReleaseAllLocks(&node_list, got_root_latch);
 
             /*
               Locking Code End
-  
+
             */
             return false;
           }
@@ -2148,16 +2087,15 @@ class BPlusTree : public BPlusTreeBase {
         Locking Code
         */
         current_node->ReleaseNodeLatch();
-        got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+        got_root_latch = ReleaseAllLocks(&node_list, got_root_latch);
         /*
           Locking Code End
         */
 
         finished_insertion = true;
-      }  
-    } 
-    if(finished_insertion == false)
-    {
+      }
+    }
+    if (!finished_insertion) {
       auto value_list = new std::list<ValueType>();
       value_list->push_back(element.second);
       KeyValuePair key_list_value;
@@ -2166,7 +2104,7 @@ class BPlusTree : public BPlusTreeBase {
       if (node->InsertElementIfPossible(key_list_value, node->FindLocation(element.first, this))) {
         // If you can directly insert in the leaf - Insertion is over
         finished_insertion = true;
-        got_root_latch = ReleaseAllLocks(node_list, got_root_latch);
+        got_root_latch = ReleaseAllLocks(&node_list, got_root_latch);
       } else {
         // Otherwise you split the node
         // Now pay attention to the fact that when we copy up the right pointer
@@ -2189,7 +2127,7 @@ class BPlusTree : public BPlusTreeBase {
         // splitted_right = node_right
         // node_right = splitted
         // splitted_left = node
-        if (node->GetElasticHighKeyPair()->second != NULL) {
+        if (node->GetElasticHighKeyPair()->second != nullptr) {
           /*
             Locking Code
           */
@@ -2221,74 +2159,68 @@ class BPlusTree : public BPlusTreeBase {
       current_node->ReleaseNodeLatch();
     }
 
-    while(!finished_insertion && node_list.size() > 0) {
+    while (!finished_insertion && !node_list.empty()) {
       auto inner_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(*node_list.rbegin());
       node_list.pop_back();
 
       // If we can insert element now without splitting then we are done
-      if(inner_node->InsertElementIfPossible(inner_node_element,
-        inner_node->FindLocation(inner_node_element.first, this))) {
+      if (inner_node->InsertElementIfPossible(inner_node_element,
+                                              inner_node->FindLocation(inner_node_element.first, this))) {
         finished_insertion = true;
       } else {
         // otherwise we have to recursively split again
 
         auto splitted_node = inner_node->SplitNode();
         auto splitted_node_begin = splitted_node->Begin();
-        if(KeyCmpGreater(splitted_node_begin->first, inner_node_element.first)) {
+        if (KeyCmpGreater(splitted_node_begin->first, inner_node_element.first)) {
           inner_node->InsertElementIfPossible(inner_node_element,
-            inner_node->FindLocation(inner_node_element.first, this));
+                                              inner_node->FindLocation(inner_node_element.first, this));
         } else {
           splitted_node->InsertElementIfPossible(inner_node_element,
-            splitted_node->FindLocation(inner_node_element.first, this));
+                                                 splitted_node->FindLocation(inner_node_element.first, this));
         }
 
-        splitted_node->GetElasticLowKeyPair()->second =
-          splitted_node->Begin()->second;
+        splitted_node->GetElasticLowKeyPair()->second = splitted_node->Begin()->second;
         inner_node_element.first = splitted_node->Begin()->first;
         inner_node_element.second = splitted_node;
         splitted_node->PopBegin();
       }
-      inner_node->ReleaseNodeLatch();    
+      inner_node->ReleaseNodeLatch();
     }
-
 
     // If still insertion is not finished we have to split the root node.
     // Remember the root must have been split by now.
-    if(!finished_insertion) {
-      auto old_root = root;
+    if (!finished_insertion) {
+      auto old_root = root_;
       KeyNodePointerPair p1, p2;
       p1.first = inner_node_element.first; /*This is a dummy initialization*/
       p2.first = inner_node_element.first; /*This is a dummy initialization*/
-      p1.second = old_root;                 /*This initialization matters*/
-      p2.second = NULL; /*This is a dummy initialization*/
-      root = ElasticNode<KeyNodePointerPair>::Get(inner_node_size_upper_threshold_,
-                                   NodeType::InnerType, root->GetDepth() + 1,
-                                   inner_node_size_upper_threshold_,
-                                   p1, p2); 
-      auto new_root_node =
-        reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root);
+      p1.second = old_root;                /*This initialization matters*/
+      p2.second = nullptr;                 /*This is a dummy initialization*/
+      root_ = ElasticNode<KeyNodePointerPair>::Get(inner_node_size_upper_threshold_, NodeType::InnerType,
+                                                   root_->GetDepth() + 1, inner_node_size_upper_threshold_, p1, p2);
+      auto new_root_node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(root_);
       new_root_node->InsertElementIfPossible(inner_node_element,
-      new_root_node->FindLocation(inner_node_element.first, this));
+                                             new_root_node->FindLocation(inner_node_element.first, this));
     }
 
-    if(got_root_latch) {
+    if (got_root_latch) {
       got_root_latch = false;
-      root_latch.unlock();
+      root_latch_.unlock();
     }
 
     return true;
   }
 
-  template<typename ElementType> 
-  void DeleteRebalance(ElasticNode<KeyNodePointerPair> * parent, 
-    BaseNode * input_child_pointer, int index, int node_lower_threshold) {
-
+  template <typename ElementType>
+  void DeleteRebalance(ElasticNode<KeyNodePointerPair> *parent, BaseNode *input_child_pointer, int index,
+                       int node_lower_threshold) {
     // We assume that we have exclusive lock for parent and only try to get lock for child nodes
     /*Locking Code*/
     // Get child lock before proceeding
     input_child_pointer->GetNodeExclusiveLatch();
     /*Locking Code End*/
-    
+
     auto child = reinterpret_cast<ElasticNode<ElementType> *>(input_child_pointer);
 
     if (child->GetSize() >= node_lower_threshold) {
@@ -2297,13 +2229,13 @@ class BPlusTree : public BPlusTreeBase {
       /*Locking Code End*/
 
       return;
-    } 
+    }
 
     // Need to rebalance
     if (index > -1) {
-      BaseNode* left_sibling_base_node;
-      ElasticNode<ElementType> * left_sibling;
-      if(index == 0) {
+      BaseNode *left_sibling_base_node;
+      ElasticNode<ElementType> *left_sibling;
+      if (index == 0) {
         left_sibling_base_node = parent->GetLowKeyPair().second;
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
       } else {
@@ -2316,16 +2248,14 @@ class BPlusTree : public BPlusTreeBase {
       left_sibling_base_node->GetNodeExclusiveLatch();
       /*Locking Code End*/
 
-      if(left_sibling->GetSize() > node_lower_threshold) {
-
-
+      if (left_sibling->GetSize() > node_lower_threshold) {
         /*
         This is for Inner Node only
         Remember for leaf node - You cannot bring down A.
-        Capital chars represent Keys. Small chars represent nodes.                    
+        Capital chars represent Keys. Small chars represent nodes.
                             A                                               C
                           /   \                                          /     \
-                       [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                       [ B ]     [ C  D ]           ==                [B  A]    [D]
                         /  \      /  \  \                             /  \  \   /  \
                        a    b    c   d   e                           a   b   c  d   e
 
@@ -2346,18 +2276,18 @@ class BPlusTree : public BPlusTreeBase {
 
         // Borrow one
 
-        if(child->GetType() == NodeType::LeafType) {
-          (parent->Begin() + index)->first = left_sibling->RBegin()->first; 
+        if (child->GetType() == NodeType::LeafType) {
+          (parent->Begin() + index)->first = left_sibling->RBegin()->first;
           child->InsertElementIfPossible(*(left_sibling->RBegin()), child->Begin());
           left_sibling->PopEnd();
         } else {
           auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
-          auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
-          /* 
+          auto inner_left_sibling = reinterpret_cast<InnerNode *>(left_sibling);
+          /*
             Make C->d to insert in child
           */
-          /*C*/auto parent_key = (parent->Begin() + index)->first;
-          /*d*/auto current_low_pointer = inner_child->GetLowKeyPair().second; 
+          /*C*/ auto parent_key = (parent->Begin() + index)->first;
+          /*d*/ auto current_low_pointer = inner_child->GetLowKeyPair().second;
           KeyNodePointerPair to_insert;
           to_insert.first = parent_key;
           to_insert.second = current_low_pointer;
@@ -2393,26 +2323,23 @@ class BPlusTree : public BPlusTreeBase {
       /*Locking Code End*/
     }
 
-    if(index < parent->GetSize() - 1) {
-      BaseNode* right_sibling_base_node = (parent->Begin() + index + 1)->second;
-      ElasticNode<ElementType> * right_sibling = 
-        reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+    if (index < parent->GetSize() - 1) {
+      BaseNode *right_sibling_base_node = (parent->Begin() + index + 1)->second;
+      auto *right_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
 
       /*Locking Code*/
       // Get right sibling lock before checking for borrowing
       right_sibling_base_node->GetNodeExclusiveLatch();
-      /*Locking Code End*/  
+      /*Locking Code End*/
 
-      if(right_sibling->GetSize() > node_lower_threshold) {
-
-
+      if (right_sibling->GetSize() > node_lower_threshold) {
         /*
         This is for Inner Node only
         Remember for leaf node - You cannot bring down A.
-        Capital chars represent Keys. Small chars represent nodes.                    
+        Capital chars represent Keys. Small chars represent nodes.
                         X   A                                          X    C
                           \   \                                          /     \
-                       [ B ]     [ C  D ]           ==                [B  A]    [D]                 
+                       [ B ]     [ C  D ]           ==                [B  A]    [D]
                         /  \      /  \  \                             /  \  \   /  \
                        a    b    c   d   e                           a   b   c  d   e
 
@@ -2435,14 +2362,14 @@ class BPlusTree : public BPlusTreeBase {
 
         // Borrow one
 
-        if(child->GetType() == NodeType::InnerType) {
+        if (child->GetType() == NodeType::InnerType) {
           auto inner_child = reinterpret_cast<InnerNode *>(input_child_pointer);
-          auto inner_right_sibling = reinterpret_cast<InnerNode *> (right_sibling);
-          /* 
+          auto inner_right_sibling = reinterpret_cast<InnerNode *>(right_sibling);
+          /*
             Make A->c to insert in child
           */
-          /*A*/auto parent_key = (parent->Begin() + index + 1)->first;
-          /*c*/auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second;
+          /*A*/ auto parent_key = (parent->Begin() + index + 1)->first;
+          /*c*/ auto current_low_pointer = inner_right_sibling->GetLowKeyPair().second;
           KeyNodePointerPair to_insert;
           to_insert.first = parent_key;
           to_insert.second = current_low_pointer;
@@ -2460,11 +2387,11 @@ class BPlusTree : public BPlusTreeBase {
           /*
             Delete C-d
           */
-          right_sibling->PopBegin();             
+          right_sibling->PopBegin();
         } else {
           child->InsertElementIfPossible(*(right_sibling->Begin()), child->End());
           right_sibling->PopBegin();
-          (parent->Begin() + index + 1)->first = right_sibling->Begin()->first; 
+          (parent->Begin() + index + 1)->first = right_sibling->Begin()->first;
         }
 
         // Borrow successful, release child and left sibling locks
@@ -2483,12 +2410,12 @@ class BPlusTree : public BPlusTreeBase {
     }
 
     // Cannot redistribute, so we perform merge
-    // We try to merge with left sibling first, if not possible 
-    // merge with right sibling   
+    // We try to merge with left sibling first, if not possible
+    // merge with right sibling
     if (index > -1) {
-      BaseNode* left_sibling_base_node;
-      ElasticNode<ElementType> * left_sibling;
-      if(index == 0) {
+      BaseNode *left_sibling_base_node;
+      ElasticNode<ElementType> *left_sibling;
+      if (index == 0) {
         left_sibling_base_node = parent->GetLowKeyPair().second;
         left_sibling = reinterpret_cast<ElasticNode<ElementType> *>(parent->GetLowKeyPair().second);
       } else {
@@ -2502,18 +2429,17 @@ class BPlusTree : public BPlusTreeBase {
       /*Locking Code End*/
 
       /*
-                           A                                         
+                           A
                          /   \                                      B  A  C  D
                         B    [C  D]              ==                /  \  \  \  \
                        / \   /  \  \                              a    b  c  d  e
                       a   b  c   d  e
       */
 
-
-      if(left_sibling->GetType() == NodeType::InnerType) {
+      if (left_sibling->GetType() == NodeType::InnerType) {
         auto parent_key = (parent->Begin() + index)->first;
         auto current_low_pointer = child->GetLowKeyPair().second;
-        auto inner_left_sibling = reinterpret_cast<InnerNode *> (left_sibling);
+        auto inner_left_sibling = reinterpret_cast<InnerNode *>(left_sibling);
 
         KeyNodePointerPair to_insert;
         to_insert.first = parent_key;
@@ -2524,30 +2450,29 @@ class BPlusTree : public BPlusTreeBase {
       /*
       Fixing sibling pointers code
       */
-      if(left_sibling->GetType() == NodeType::LeafType) {
-        if(child->GetHighKeyPair().second != NULL) {
-          BaseNode* new_right_sibling = child->GetHighKeyPair().second;
+      if (left_sibling->GetType() == NodeType::LeafType) {
+        if (child->GetHighKeyPair().second != nullptr) {
+          BaseNode *new_right_sibling = child->GetHighKeyPair().second;
 
           /*Locking Code*/
           // Get right sibling lock before updating sibling pointers
           new_right_sibling->GetNodeExclusiveLatch();
           /*Locking Code End*/
 
-
           left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
           reinterpret_cast<ElasticNode<KeyValuePair> *>(child->GetHighKeyPair().second)
-            ->GetElasticLowKeyPair()->second = left_sibling;
+              ->GetElasticLowKeyPair()
+              ->second = left_sibling;
 
           /*Locking Code*/
           // updating sibling pointers complete, release lock
           new_right_sibling->ReleaseNodeLatch();
-          /*Locking Code End*/  
+          /*Locking Code End*/
 
         } else {
           left_sibling->GetElasticHighKeyPair()->second = child->GetHighKeyPair().second;
         }
       }
-
 
       left_sibling->MergeNode(child);
 
@@ -2559,22 +2484,20 @@ class BPlusTree : public BPlusTreeBase {
 
       child->FreeElasticNode();
       parent->Erase(index);
-      return;
 
     } else {
-      BaseNode* right_sibling_base_node = (parent->Begin() + index + 1)->second;
-      ElasticNode<ElementType> * right_sibling = 
-        reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
+      BaseNode *right_sibling_base_node = (parent->Begin() + index + 1)->second;
+      auto *right_sibling = reinterpret_cast<ElasticNode<ElementType> *>((parent->Begin() + index + 1)->second);
 
-      /*Locking Code*/    
+      /*Locking Code*/
       // Get left sibling lock before checking for borrowing
       right_sibling_base_node->GetNodeExclusiveLatch();
       /*Locking Code End*/
 
-      if(right_sibling->GetType() == NodeType::InnerType) {
+      if (right_sibling->GetType() == NodeType::InnerType) {
         auto parent_key = (parent->Begin() + index + 1)->first;
         auto current_low_pointer = right_sibling->GetLowKeyPair().second;
-        auto inner_child = reinterpret_cast<InnerNode *> (child);
+        auto inner_child = reinterpret_cast<InnerNode *>(child);
 
         KeyNodePointerPair to_insert;
         to_insert.first = parent_key;
@@ -2585,9 +2508,9 @@ class BPlusTree : public BPlusTreeBase {
       /*
       Fixing sibling pointers code
       */
-      if(child->GetType() == NodeType::LeafType) {
-        if(right_sibling->GetHighKeyPair().second != NULL) {
-          BaseNode* new_right_sibling = right_sibling->GetHighKeyPair().second;
+      if (child->GetType() == NodeType::LeafType) {
+        if (right_sibling->GetHighKeyPair().second != nullptr) {
+          BaseNode *new_right_sibling = right_sibling->GetHighKeyPair().second;
 
           /*Locking Code*/
           // Get right sibling lock before updating sibling pointers
@@ -2596,7 +2519,8 @@ class BPlusTree : public BPlusTreeBase {
 
           child->GetElasticHighKeyPair()->second = right_sibling->GetHighKeyPair().second;
           reinterpret_cast<ElasticNode<KeyValuePair> *>(right_sibling->GetHighKeyPair().second)
-            ->GetElasticLowKeyPair()->second = child;
+              ->GetElasticLowKeyPair()
+              ->second = child;
 
           /*Locking Code*/
           // updating sibling pointers complete, release lock
@@ -2607,7 +2531,6 @@ class BPlusTree : public BPlusTreeBase {
         }
       }
 
-
       child->MergeNode(right_sibling);
 
       // Merge successful, release child and right sibling locks
@@ -2617,17 +2540,13 @@ class BPlusTree : public BPlusTreeBase {
       /*Locking Code End*/
 
       right_sibling->FreeElasticNode();
-      parent->Erase(index+1);
-      return;
+      parent->Erase(index + 1);
     }
-
-    // Should never reach this point
-    return;
   }
 
   /* RelaseLastLocksDelete - Releases the node's latch and pops it from the list*/
-  void RelaseLastLocksDelete(std::vector<std::shared_mutex *> * lock_list) {
-    if(lock_list->size() > 0) {
+  void RelaseLastLocksDelete(std::vector<std::shared_mutex *> *lock_list) {
+    if (!lock_list->empty()) {
       (*lock_list->rbegin())->unlock();
       lock_list->pop_back();
     }
@@ -2641,21 +2560,20 @@ class BPlusTree : public BPlusTreeBase {
     /*
      ****************************
       First try optimistic delete
-     **************************** 
+     ****************************
     */
-    /* If root is NULL then we return false.
+    /* If root is nullptr then we return false.
      */
-    root_latch.lock();
+    root_latch_.lock();
 
-    if (root == NULL) {
-      root_latch.unlock();
+    if (root_ == nullptr) {
+      root_latch_.unlock();
       return false;
     }
     // beyond this point we'll have exclusive_lock on tree lock
 
-    BaseNode *current_node = root;
+    BaseNode *current_node = root_;
     BaseNode *parent_node = nullptr;
-
 
     /*
       Locking Code
@@ -2676,12 +2594,12 @@ class BPlusTree : public BPlusTreeBase {
       if (parent_node != nullptr) {
         parent_node->ReleaseNodeLatch();
       } else {
-        root_latch.unlock();
+        root_latch_.unlock();
       }
       /*
         Locking Code End
       */
-      
+
       // Note that Find Location returns the location of first element
       // that compare greater than
       auto index_pointer = node->FindLocation(element.first, this);
@@ -2695,7 +2613,6 @@ class BPlusTree : public BPlusTreeBase {
         parent_node = current_node;
         current_node = node->GetLowKeyPair().second;
       }
-
 
       /*
         Locking Code
@@ -2719,30 +2636,28 @@ class BPlusTree : public BPlusTreeBase {
     if (parent_node != nullptr) {
       parent_node->ReleaseNodeLatch();
     } else {
-      root_latch.unlock();
+      root_latch_.unlock();
     }
     /*
       Locking Code End
       Beyond this we only have exclusive latch on the current_node
     */
 
-
-
     bool finished_deletion = false;
     auto node = reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node);
     auto location_greater_key_leaf = node->FindLocation(element.first, this);
     if (location_greater_key_leaf != node->Begin()) {
-      if(KeyCmpEqual((location_greater_key_leaf - 1)->first,element.first)) {
+      if (KeyCmpEqual((location_greater_key_leaf - 1)->first, element.first)) {
         // Key present in tree => check if value present & delete from value list
         bool found_value = false;
         auto itr_list = (location_greater_key_leaf - 1)->second->begin();
-        while(itr_list != (location_greater_key_leaf - 1)->second->end()) {
-          if(ValueCmpEqual(*itr_list, element.second)) {
+        while (itr_list != (location_greater_key_leaf - 1)->second->end()) {
+          if (ValueCmpEqual(*itr_list, element.second)) {
             /*
               Value fround => Delete element from list if won't trigger rebalance
             */
             found_value = true;
-            if (((location_greater_key_leaf - 1)->second->size() > 1) || 
+            if (((location_greater_key_leaf - 1)->second->size() > 1) ||
                 (node->GetSize() > GetLeafNodeSizeLowerThreshold())) {
               (location_greater_key_leaf - 1)->second->erase(itr_list);
               finished_deletion = true;
@@ -2751,7 +2666,7 @@ class BPlusTree : public BPlusTreeBase {
           }
           itr_list++;
         }
-        
+
         if (!found_value) {
           // Value not in tree
           /*
@@ -2763,15 +2678,17 @@ class BPlusTree : public BPlusTreeBase {
           */
 
           return false;
-        } else if (found_value) {
+        }
+
+        if (found_value) {
           if (finished_deletion) {
             /*If now the list is empty delete key-emptylist from the tree*/
             bool is_deleted = true;
-            if((location_greater_key_leaf - 1)->second->size() == 0) {
+            if ((location_greater_key_leaf - 1)->second->empty()) {
               delete (location_greater_key_leaf - 1)->second;
               is_deleted = node->Erase((location_greater_key_leaf - 1) - node->Begin());
             }
-            
+
             /*
               Release node lock after delete
             */
@@ -2781,7 +2698,9 @@ class BPlusTree : public BPlusTreeBase {
             */
 
             return is_deleted;
-          } else {
+          }
+
+          if (!finished_deletion) {
             // Need to continue with pessimistic
             /*
               Release node lock after delete
@@ -2789,24 +2708,23 @@ class BPlusTree : public BPlusTreeBase {
             current_node->ReleaseNodeLatch();
             /*
               Locking Code End
-            */            
+            */
           }
         }
       } else {
-        // Deletion not done yet as key is not present 
-      /*
-        Release node lock after key not found to delete
-      */
-      current_node->ReleaseNodeLatch();
-      /*
-        Locking Code End
-      */
+        // Deletion not done yet as key is not present
+        /*
+          Release node lock after key not found to delete
+        */
+        current_node->ReleaseNodeLatch();
+        /*
+          Locking Code End
+        */
 
-      return false;        
-      } 
+        return false;
+      }
     } else {
-
-      // Deletion not done yet as key is not present 
+      // Deletion not done yet as key is not present
       /*
         Release node lock after key not found to delete
       */
@@ -2821,14 +2739,13 @@ class BPlusTree : public BPlusTreeBase {
     /*
      ****************************************
       if not successful -> pessimistic delete
-     **************************************** 
-    */    
-
+     ****************************************
+    */
 
     std::vector<std::shared_mutex *> lock_list;
-    root_latch.lock();
-    lock_list.push_back(&root_latch);
-    bool is_deleted = Delete(root, element, &lock_list);
+    root_latch_.lock();
+    lock_list.push_back(&root_latch_);
+    bool is_deleted = Delete(root_, element, &lock_list);
     RelaseLastLocksDelete(&lock_list);
     return is_deleted;
   }
@@ -2840,9 +2757,9 @@ class BPlusTree : public BPlusTreeBase {
    * exist. Return true if delete succeeds
    *
    */
-  bool Delete(BaseNode* current_node, const KeyElementPair &element, std::vector<std::shared_mutex *> * lock_list) {
+  bool Delete(BaseNode *current_node, const KeyElementPair &element, std::vector<std::shared_mutex *> *lock_list) {
     // If tree is empty, return false
-    if (current_node == NULL) {
+    if (current_node == nullptr) {
       return false;
     }
 
@@ -2852,26 +2769,27 @@ class BPlusTree : public BPlusTreeBase {
     current_node->GetNodeExclusiveLatch();
 
     bool condition_for_underflow = true;
-    if(current_node == root) {
-      if (current_node->GetType() == NodeType::InnerType
-          && (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > 1) {
+    if (current_node == root_) {
+      if (current_node->GetType() == NodeType::InnerType &&
+          (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > 1) {
         condition_for_underflow = false;
-      } else if (current_node->GetType() == NodeType::LeafType
-          && (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > 1) {
+      } else if (current_node->GetType() == NodeType::LeafType &&
+                 (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > 1) {
         condition_for_underflow = false;
-      } 
+      }
     }
-    if(current_node != root && current_node->GetType() == NodeType::InnerType
-      && (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() > GetInnerNodeSizeLowerThreshold()) {
+    if (current_node != root_ && current_node->GetType() == NodeType::InnerType &&
+        (reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node))->GetSize() >
+            GetInnerNodeSizeLowerThreshold()) {
       condition_for_underflow = false;
     }
-    if(current_node != root && current_node->GetType() == NodeType::LeafType
-      && (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > GetLeafNodeSizeLowerThreshold()) {
+    if (current_node != root_ && current_node->GetType() == NodeType::LeafType &&
+        (reinterpret_cast<ElasticNode<KeyValuePair> *>(current_node))->GetSize() > GetLeafNodeSizeLowerThreshold()) {
       condition_for_underflow = false;
     }
 
-    if(!condition_for_underflow) {
-      while(!lock_list->empty()) {
+    if (!condition_for_underflow) {
+      while (!lock_list->empty()) {
         (*lock_list->rbegin())->unlock();
         lock_list->pop_back();
       }
@@ -2881,7 +2799,6 @@ class BPlusTree : public BPlusTreeBase {
     /*
       Locking Code End
     */
-
 
     // If delete called on leaf node, just perform deletion
     // Else, call delete on child and check if child becomes underfull
@@ -2894,8 +2811,8 @@ class BPlusTree : public BPlusTreeBase {
         if (KeyCmpEqual(leaf_position->first, element.first)) {
           bool element_present = false;
           auto itr_list = (leaf_position)->second->begin();
-          while(itr_list != (leaf_position)->second->end()) {
-            if(ValueCmpEqual(*itr_list, element.second)) {
+          while (itr_list != (leaf_position)->second->end()) {
+            if (ValueCmpEqual(*itr_list, element.second)) {
               /*Delete element from list*/
               (leaf_position)->second->erase(itr_list);
               element_present = true;
@@ -2905,7 +2822,7 @@ class BPlusTree : public BPlusTreeBase {
           }
 
           /*Not Found - Return false*/
-          if(!element_present) {
+          if (!element_present) {
             /*Locking Code*/
             RelaseLastLocksDelete(lock_list);
             /*Locking Code End*/
@@ -2913,7 +2830,7 @@ class BPlusTree : public BPlusTreeBase {
             return false;
           }
 
-          if(leaf_position->second->size() > 0) {
+          if (!leaf_position->second->empty()) {
             /*Locking Code*/
             RelaseLastLocksDelete(lock_list);
             /*Locking Code End*/
@@ -2927,7 +2844,7 @@ class BPlusTree : public BPlusTreeBase {
           if (is_deleted && node->GetSize() == 0) {
             // all elements of tree are now deleted
             node->FreeElasticNode(); /*Important - we need to free node*/
-            root = NULL;
+            root_ = nullptr;
           }
 
           /*Locking Code*/
@@ -2935,23 +2852,28 @@ class BPlusTree : public BPlusTreeBase {
           /*Locking Code End*/
 
           return is_deleted;
-        } else {
-          /*Locking Code*/
-          RelaseLastLocksDelete(lock_list);
-          /*Locking Code End*/
-          return false;
         }
-      } else {
+
+        // Key not found
         /*Locking Code*/
         RelaseLastLocksDelete(lock_list);
         /*Locking Code End*/
         return false;
       }
+
+      if (leaf_position == node->Begin()) {
+        // Key not found
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
+        return false;
+      }
+
     } else {
       // Inner Node case => call delete element on child and check if child becomes underfull
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
       auto child_position = node->FindLocation(element.first, this);
-      BaseNode* child_pointer;
+      BaseNode *child_pointer;
       int index;
       if (child_position != node->Begin()) {
         child_pointer = (child_position - 1)->second;
@@ -2964,24 +2886,21 @@ class BPlusTree : public BPlusTreeBase {
 
       // Now perform any rebalancing or merge on child if it becomes underfull
       if (is_deleted) {
-        if(lock_list->size() > 0) {
-          if (child_pointer->GetType() == NodeType:: LeafType) {
-            DeleteRebalance<KeyValuePair>(node, child_pointer, 
-              index, GetLeafNodeSizeLowerThreshold());
+        if (!lock_list->empty()) {
+          if (child_pointer->GetType() == NodeType::LeafType) {
+            DeleteRebalance<KeyValuePair>(node, child_pointer, index, GetLeafNodeSizeLowerThreshold());
           } else {
-            DeleteRebalance<KeyNodePointerPair>(node, child_pointer, 
-              index, GetInnerNodeSizeLowerThreshold());
+            DeleteRebalance<KeyNodePointerPair>(node, child_pointer, index, GetInnerNodeSizeLowerThreshold());
           }
         }
 
-
         // Check if this node is root and if its size becomes 0
         if (node->GetSize() == 0) {
-          root = current_node->GetLowKeyPair().second;
+          root_ = current_node->GetLowKeyPair().second;
 
           /*Locking Code*/
           RelaseLastLocksDelete(lock_list);
-          /*Locking Code End*/          
+          /*Locking Code End*/
 
           node->FreeElasticNode();
           return true;
@@ -2992,46 +2911,46 @@ class BPlusTree : public BPlusTreeBase {
         /*Locking Code End*/
 
         return true;
-      } else {
-
-        /*Locking Code*/
-        RelaseLastLocksDelete(lock_list);
-        /*Locking Code End*/
-        return false;
       }
+
+      // Reached here => not deleted
+      /*Locking Code*/
+      RelaseLastLocksDelete(lock_list);
+      /*Locking Code End*/
+      return false;
     }
+
+    return false;
   }
 
-  BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
-         KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
-         ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{}, ValueHashFunc p_value_hash_obj = ValueHashFunc{})
+  explicit BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},
+                     KeyEqualityChecker p_key_eq_obj = KeyEqualityChecker{}, KeyHashFunc p_key_hash_obj = KeyHashFunc{},
+                     ValueEqualityChecker p_value_eq_obj = ValueEqualityChecker{},
+                     ValueHashFunc p_value_hash_obj = ValueHashFunc{})
       : BPlusTreeBase(),
         // Key comparator, equality checker and hasher
-        key_cmp_obj{p_key_cmp_obj},
-        key_eq_obj{p_key_eq_obj},
-        key_hash_obj{p_key_hash_obj},
+        key_cmp_obj_{p_key_cmp_obj},
+        key_eq_obj_{p_key_eq_obj},
+        key_hash_obj_{p_key_hash_obj},
 
         // Value equality checker and hasher
-        value_eq_obj{p_value_eq_obj},
-        value_hash_obj{p_value_hash_obj},
+        value_eq_obj_{p_value_eq_obj},
+        value_hash_obj_{p_value_hash_obj},
 
         // key-node ID pair cmp, equality checker and hasher
-        key_node_id_pair_cmp_obj{this},
-        key_node_id_pair_eq_obj{this},
+        key_node_id_pair_cmp_obj_{this},
+        key_node_id_pair_eq_obj_{this},
 
         // key-value pair cmp, equality checker and hasher
-        key_value_pair_cmp_obj{this},
-        key_value_pair_eq_obj{this},
-        root(NULL) {}
-
+        key_value_pair_cmp_obj_{this},
+        key_value_pair_eq_obj_{this},
+        root_(nullptr) {}
 
   /*
    * Destructor - Destroy BplusTree instance
    *
    */
-  ~BPlusTree() {
-    FreeTree();
-  }
+  ~BPlusTree() { FreeTree(); }
 };  // class BPlusTree
 
 }  // namespace terrier::storage::index

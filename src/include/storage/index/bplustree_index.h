@@ -50,10 +50,8 @@ class BPlusTreeIndex final : public Index {
                    "This Insert is designed for secondary indexes with no uniqueness constraints.");
     KeyType index_key;
     index_key.SetFromProjectedRow(tuple, metadata_, metadata_.GetSchema().GetColumns().size());
-    
-    auto predicate = [txn](const TupleSlot slot) -> bool {
-      return false;
-    };
+
+    auto predicate = [](const TupleSlot slot) -> bool { return false; };
 
     const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
 
@@ -88,7 +86,6 @@ class BPlusTreeIndex final : public Index {
     // FIXME(15-721 project2): perform a non-unique CONDITIONAL insert into the underlying data structure of the
     // key/value pair
     const bool result = bplustree_->Insert(bplustree_->GetElement(index_key, location), predicate);
-;
 
     // TERRIER_ASSERT(predicate_satisfied != result, "If predicate is not satisfied then insertion should succeed.");
 
@@ -122,7 +119,7 @@ class BPlusTreeIndex final : public Index {
     txn->RegisterCommitAction([=](transaction::DeferredActionManager *deferred_action_manager) {
       deferred_action_manager->RegisterDeferredAction([=]() {
         // FIXME(15-721 project2): perform a delete from the underlying data structure of the key/value pair
-        const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));;
+        const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));
 
         TERRIER_ASSERT(result, "Deferred delete on the index failed.");
       });
@@ -141,11 +138,10 @@ class BPlusTreeIndex final : public Index {
 
     // Perform lookup in BPlusTree
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->FindValueOfKey(index_key, results);
+    bplustree_->FindValueOfKey(index_key, &results);
 
     // Avoid resizing our value_list, even if it means over-provisioning
     value_list->reserve(results.size());
-
 
     // Perform visibility check on result
     for (const auto &result : results) {
@@ -175,8 +171,8 @@ class BPlusTreeIndex final : public Index {
     std::vector<TupleSlot> results;
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->ScanAscending(index_low_key, index_high_key, low_key_exists, num_attrs,
-    high_key_exists, limit, &results, &metadata_);
+    bplustree_->ScanAscending(index_low_key, index_high_key, low_key_exists, num_attrs, high_key_exists, limit,
+                              &results, &metadata_);
 
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
@@ -196,7 +192,7 @@ class BPlusTreeIndex final : public Index {
     bool scan_completed = false;
     std::vector<TupleSlot> results;
 
-    while(!scan_completed) {
+    while (!scan_completed) {
       results.clear();
       scan_completed = bplustree_->ScanDescending(index_low_key, index_high_key, &results);
     }
@@ -220,7 +216,7 @@ class BPlusTreeIndex final : public Index {
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     bool scan_completed = false;
     std::vector<TupleSlot> results;
-    while(!scan_completed) {
+    while (!scan_completed) {
       results.clear();
       scan_completed = bplustree_->ScanLimitDescending(index_low_key, index_high_key, &results, limit);
     }
