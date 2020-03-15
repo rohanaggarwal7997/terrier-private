@@ -1380,7 +1380,7 @@ class BPlusTree : public BPlusTreeBase {
       if (!(return_value)) {
         return return_value;
       }
-      if (values.size() != 0) {
+      if (!values.empty()) {
         return false;
       }
     }
@@ -2484,7 +2484,6 @@ class BPlusTree : public BPlusTreeBase {
 
       child->FreeElasticNode();
       parent->Erase(index);
-      return;
 
     } else {
       BaseNode *right_sibling_base_node = (parent->Begin() + index + 1)->second;
@@ -2542,10 +2541,7 @@ class BPlusTree : public BPlusTreeBase {
 
       right_sibling->FreeElasticNode();
       parent->Erase(index + 1);
-      return;
     }
-
-    // Should never reach this point
   }
 
   /* RelaseLastLocksDelete - Releases the node's latch and pops it from the list*/
@@ -2682,7 +2678,9 @@ class BPlusTree : public BPlusTreeBase {
           */
 
           return false;
-        } else if (found_value) {
+        } 
+
+        if (found_value) {
           if (finished_deletion) {
             /*If now the list is empty delete key-emptylist from the tree*/
             bool is_deleted = true;
@@ -2700,7 +2698,9 @@ class BPlusTree : public BPlusTreeBase {
             */
 
             return is_deleted;
-          } else {
+          } 
+
+          if (!finished_deletion) {
             // Need to continue with pessimistic
             /*
               Release node lock after delete
@@ -2852,18 +2852,24 @@ class BPlusTree : public BPlusTreeBase {
           /*Locking Code End*/
 
           return is_deleted;
-        } else {
-          /*Locking Code*/
-          RelaseLastLocksDelete(lock_list);
-          /*Locking Code End*/
-          return false;
-        }
-      } else {
+        } 
+        
+        // Key not found
+        /*Locking Code*/
+        RelaseLastLocksDelete(lock_list);
+        /*Locking Code End*/
+        return false;
+
+      } 
+
+      if (leaf_position == node->Begin()) {
+        // Key not found
         /*Locking Code*/
         RelaseLastLocksDelete(lock_list);
         /*Locking Code End*/
         return false;
       }
+  
     } else {
       // Inner Node case => call delete element on child and check if child becomes underfull
       auto node = reinterpret_cast<ElasticNode<KeyNodePointerPair> *>(current_node);
@@ -2906,13 +2912,16 @@ class BPlusTree : public BPlusTreeBase {
         /*Locking Code End*/
 
         return true;
-      } else {
-        /*Locking Code*/
-        RelaseLastLocksDelete(lock_list);
-        /*Locking Code End*/
-        return false;
-      }
+      } 
+      
+      // Reached here => not deleted
+      /*Locking Code*/
+      RelaseLastLocksDelete(lock_list);
+      /*Locking Code End*/
+      return false;
     }
+
+    return false;
   }
 
   explicit BPlusTree(KeyComparator p_key_cmp_obj = KeyComparator{},

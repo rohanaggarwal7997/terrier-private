@@ -567,7 +567,7 @@ void DuplicateKeyValueInsertTest() {
   bplustree->SetLeafNodeSizeUpperThreshold(5);
   std::unordered_map<int, std::set<int>> keys_values;
   for (int i = 0; i < 100000; i++) {
-    int k = i % 1000;                                           // there will be 100 inserts for same key
+    int k = i % 1000;     // there will be 100 inserts for same key
     int v = rand() % 50;  // expect one duplicate value per key
     if (keys_values.count(k) == 0) {
       std::set<int> value_list;
@@ -801,7 +801,7 @@ void DuplicateKeyDeleteTest() {
   std::map<int, std::set<int>> key_vals;
   for (int i = 0; i < 10000; i++) {
     BPlusTree<int, int>::KeyElementPair p1;
-    int k = i % 100;                                              // 100 different keys
+    int k = i % 100;        // 100 different keys
     int v = rand() % 5000;  // 100 values per key
     if (key_vals.count(k) == 0) {
       std::set<int> s;
