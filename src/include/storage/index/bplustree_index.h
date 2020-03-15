@@ -119,7 +119,7 @@ class BPlusTreeIndex final : public Index {
     txn->RegisterCommitAction([=](transaction::DeferredActionManager *deferred_action_manager) {
       deferred_action_manager->RegisterDeferredAction([=]() {
         // FIXME(15-721 project2): perform a delete from the underlying data structure of the key/value pair
-        const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));;
+        const bool UNUSED_ATTRIBUTE result = bplustree_->DeleteWithLock(bplustree_->GetElement(index_key, location));
 
         TERRIER_ASSERT(result, "Deferred delete on the index failed.");
       });
@@ -171,8 +171,8 @@ class BPlusTreeIndex final : public Index {
     std::vector<TupleSlot> results;
 
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
-    bplustree_->ScanAscending(index_low_key, index_high_key, low_key_exists, num_attrs,
-    high_key_exists, limit, &results, &metadata_);
+    bplustree_->ScanAscending(index_low_key, index_high_key, low_key_exists, num_attrs, high_key_exists, limit,
+                              &results, &metadata_);
 
     for (const auto &result : results) {
       if (IsVisible(txn, result)) value_list->emplace_back(result);
@@ -192,7 +192,7 @@ class BPlusTreeIndex final : public Index {
     bool scan_completed = false;
     std::vector<TupleSlot> results;
 
-    while(!scan_completed) {
+    while (!scan_completed) {
       results.clear();
       scan_completed = bplustree_->ScanDescending(index_low_key, index_high_key, &results);
     }
@@ -216,7 +216,7 @@ class BPlusTreeIndex final : public Index {
     // FIXME(15-721 project2): perform a lookup of the underlying data structure of the key
     bool scan_completed = false;
     std::vector<TupleSlot> results;
-    while(!scan_completed) {
+    while (!scan_completed) {
       results.clear();
       scan_completed = bplustree_->ScanLimitDescending(index_low_key, index_high_key, &results, limit);
     }
