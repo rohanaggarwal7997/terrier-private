@@ -1,0 +1,1300 @@
+('Run ', 1)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7421 ms)
+[----------] 1 test from TPCCTests (7421 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7421 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 2)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7449 ms)
+[----------] 1 test from TPCCTests (7449 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7449 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 3)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7441 ms)
+[----------] 1 test from TPCCTests (7441 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7441 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 4)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7431 ms)
+[----------] 1 test from TPCCTests (7431 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7431 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 5)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7426 ms)
+[----------] 1 test from TPCCTests (7426 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7426 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 6)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7414 ms)
+[----------] 1 test from TPCCTests (7414 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7414 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 7)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7431 ms)
+[----------] 1 test from TPCCTests (7431 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7431 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 8)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7420 ms)
+[----------] 1 test from TPCCTests (7420 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7420 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 9)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7445 ms)
+[----------] 1 test from TPCCTests (7445 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7445 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 10)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7423 ms)
+[----------] 1 test from TPCCTests (7423 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7424 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 11)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7411 ms)
+[----------] 1 test from TPCCTests (7411 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7411 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 12)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7402 ms)
+[----------] 1 test from TPCCTests (7402 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7402 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 13)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7411 ms)
+[----------] 1 test from TPCCTests (7411 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7411 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 14)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7427 ms)
+[----------] 1 test from TPCCTests (7427 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7427 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 15)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7408 ms)
+[----------] 1 test from TPCCTests (7408 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7408 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 16)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7409 ms)
+[----------] 1 test from TPCCTests (7409 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7409 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 17)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7427 ms)
+[----------] 1 test from TPCCTests (7427 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7427 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 18)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7424 ms)
+[----------] 1 test from TPCCTests (7424 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7424 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 19)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7460 ms)
+[----------] 1 test from TPCCTests (7460 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7460 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 20)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7385 ms)
+[----------] 1 test from TPCCTests (7385 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7385 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 21)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7419 ms)
+[----------] 1 test from TPCCTests (7419 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7419 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 22)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7430 ms)
+[----------] 1 test from TPCCTests (7430 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7430 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 23)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7449 ms)
+[----------] 1 test from TPCCTests (7449 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7449 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 24)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7440 ms)
+[----------] 1 test from TPCCTests (7440 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7440 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 25)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7457 ms)
+[----------] 1 test from TPCCTests (7457 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7457 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 26)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7445 ms)
+[----------] 1 test from TPCCTests (7445 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7445 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 27)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7423 ms)
+[----------] 1 test from TPCCTests (7423 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7423 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 28)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7453 ms)
+[----------] 1 test from TPCCTests (7453 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7453 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 29)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7458 ms)
+[----------] 1 test from TPCCTests (7458 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7458 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 30)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7457 ms)
+[----------] 1 test from TPCCTests (7457 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7457 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 31)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7437 ms)
+[----------] 1 test from TPCCTests (7437 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7437 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 32)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7446 ms)
+[----------] 1 test from TPCCTests (7446 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7446 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 33)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7454 ms)
+[----------] 1 test from TPCCTests (7454 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7456 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 34)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7409 ms)
+[----------] 1 test from TPCCTests (7409 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7409 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 35)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7429 ms)
+[----------] 1 test from TPCCTests (7429 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7429 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 36)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7417 ms)
+[----------] 1 test from TPCCTests (7417 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7417 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 37)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7424 ms)
+[----------] 1 test from TPCCTests (7424 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7424 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 38)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7414 ms)
+[----------] 1 test from TPCCTests (7414 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7414 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 39)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7466 ms)
+[----------] 1 test from TPCCTests (7466 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7466 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 40)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7304 ms)
+[----------] 1 test from TPCCTests (7304 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7304 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 41)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7428 ms)
+[----------] 1 test from TPCCTests (7428 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7428 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 42)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7444 ms)
+[----------] 1 test from TPCCTests (7444 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7444 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 43)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7418 ms)
+[----------] 1 test from TPCCTests (7418 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7418 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 44)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7432 ms)
+[----------] 1 test from TPCCTests (7432 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7432 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 45)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7490 ms)
+[----------] 1 test from TPCCTests (7490 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7490 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 46)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7445 ms)
+[----------] 1 test from TPCCTests (7445 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7445 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 47)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7434 ms)
+[----------] 1 test from TPCCTests (7434 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7434 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 48)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7424 ms)
+[----------] 1 test from TPCCTests (7424 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7424 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 49)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7432 ms)
+[----------] 1 test from TPCCTests (7432 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7432 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 50)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7475 ms)
+[----------] 1 test from TPCCTests (7475 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7475 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 51)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7441 ms)
+[----------] 1 test from TPCCTests (7441 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7441 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 52)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7445 ms)
+[----------] 1 test from TPCCTests (7445 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7445 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 53)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7465 ms)
+[----------] 1 test from TPCCTests (7465 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7465 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 54)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7483 ms)
+[----------] 1 test from TPCCTests (7483 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7483 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 55)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7432 ms)
+[----------] 1 test from TPCCTests (7432 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7432 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 56)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7448 ms)
+[----------] 1 test from TPCCTests (7448 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7448 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 57)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7461 ms)
+[----------] 1 test from TPCCTests (7461 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7461 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 58)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7454 ms)
+[----------] 1 test from TPCCTests (7454 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7454 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 59)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7427 ms)
+[----------] 1 test from TPCCTests (7427 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7427 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 60)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7456 ms)
+[----------] 1 test from TPCCTests (7456 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7456 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 61)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7429 ms)
+[----------] 1 test from TPCCTests (7429 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7429 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 62)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7441 ms)
+[----------] 1 test from TPCCTests (7441 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7441 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 63)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7433 ms)
+[----------] 1 test from TPCCTests (7433 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7433 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 64)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7445 ms)
+[----------] 1 test from TPCCTests (7445 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7445 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 65)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7434 ms)
+[----------] 1 test from TPCCTests (7434 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7434 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 66)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7432 ms)
+[----------] 1 test from TPCCTests (7432 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7433 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 67)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7425 ms)
+[----------] 1 test from TPCCTests (7425 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7425 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 68)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7440 ms)
+[----------] 1 test from TPCCTests (7440 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7440 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 69)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7436 ms)
+[----------] 1 test from TPCCTests (7436 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7436 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 70)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7456 ms)
+[----------] 1 test from TPCCTests (7456 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7456 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 71)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7440 ms)
+[----------] 1 test from TPCCTests (7440 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7440 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 72)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7450 ms)
+[----------] 1 test from TPCCTests (7450 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7450 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 73)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7464 ms)
+[----------] 1 test from TPCCTests (7464 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7464 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 74)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7447 ms)
+[----------] 1 test from TPCCTests (7447 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7447 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 75)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7279 ms)
+[----------] 1 test from TPCCTests (7279 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7279 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 76)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7435 ms)
+[----------] 1 test from TPCCTests (7435 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7435 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 77)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7433 ms)
+[----------] 1 test from TPCCTests (7433 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7433 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 78)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7430 ms)
+[----------] 1 test from TPCCTests (7430 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7430 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 79)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7365 ms)
+[----------] 1 test from TPCCTests (7365 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7365 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 80)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7435 ms)
+[----------] 1 test from TPCCTests (7435 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7435 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 81)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7445 ms)
+[----------] 1 test from TPCCTests (7445 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7445 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 82)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7455 ms)
+[----------] 1 test from TPCCTests (7455 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7455 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 83)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7435 ms)
+[----------] 1 test from TPCCTests (7435 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7435 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 84)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7439 ms)
+[----------] 1 test from TPCCTests (7439 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7439 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 85)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7430 ms)
+[----------] 1 test from TPCCTests (7430 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7430 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 86)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7431 ms)
+[----------] 1 test from TPCCTests (7431 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7431 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 87)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7455 ms)
+[----------] 1 test from TPCCTests (7455 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7455 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 88)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7443 ms)
+[----------] 1 test from TPCCTests (7443 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7443 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 89)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7444 ms)
+[----------] 1 test from TPCCTests (7444 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7444 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 90)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7459 ms)
+[----------] 1 test from TPCCTests (7459 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7459 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 91)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7430 ms)
+[----------] 1 test from TPCCTests (7430 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7430 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 92)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7456 ms)
+[----------] 1 test from TPCCTests (7456 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7456 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 93)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7296 ms)
+[----------] 1 test from TPCCTests (7296 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7297 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 94)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7442 ms)
+[----------] 1 test from TPCCTests (7442 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7442 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 95)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7447 ms)
+[----------] 1 test from TPCCTests (7447 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7447 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 96)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7440 ms)
+[----------] 1 test from TPCCTests (7440 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7440 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 97)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7437 ms)
+[----------] 1 test from TPCCTests (7437 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7437 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 98)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7447 ms)
+[----------] 1 test from TPCCTests (7447 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7447 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 99)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7443 ms)
+[----------] 1 test from TPCCTests (7443 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7443 ms total)
+[  PASSED  ] 1 test.
+
+('Run ', 100)
+Running main() from gmock_main.cc
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TPCCTests
+[ RUN      ] TPCCTests.WithoutLoggingBPlusTreeIndexes
+[       OK ] TPCCTests.WithoutLoggingBPlusTreeIndexes (7305 ms)
+[----------] 1 test from TPCCTests (7305 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test case ran. (7305 ms total)
+[  PASSED  ] 1 test.
+
